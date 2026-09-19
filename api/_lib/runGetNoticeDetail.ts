@@ -45,9 +45,7 @@ export async function runGetNoticeDetail(): Promise<GetNoticeDetailResult> {
     throw new Error('ASSEMBLY_API_KEY가 설정되지 않았어요.');
   }
 
-  const { data: cards, error: cardsError } = await supabaseAdmin
-    .from('cards')
-    .select('notice_id');
+  const { data: cards, error: cardsError } = await supabaseAdmin.from('cards').select('notice_id');
   if (cardsError) throw new Error(`cards 조회 실패: ${cardsError.message}`);
 
   const candidateIds = [...new Set((cards ?? []).map((c) => c.notice_id as string))];

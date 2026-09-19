@@ -11,7 +11,15 @@ const HOUSING_TYPES = ['가족과 함께', '월세', '전세', '기숙사', '기
 const FINANCE_OPTIONS = ['학자금 대출', '청년 대출', '해당 없음'];
 const INTERESTS = ['노동', '주거', '금융', '교육', '세금·보험'];
 
-function Section({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Section({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-2">
       <p className="text-[12px] font-bold text-ink">
@@ -50,7 +58,12 @@ export default function ProfileForm() {
       setFinance((prev) => (prev.includes(value) ? [] : ['해당 없음']));
       return;
     }
-    setFinance((prev) => toggleInArray(prev.filter((v) => v !== '해당 없음'), value));
+    setFinance((prev) =>
+      toggleInArray(
+        prev.filter((v) => v !== '해당 없음'),
+        value,
+      ),
+    );
   }
 
   async function handleSubmit() {

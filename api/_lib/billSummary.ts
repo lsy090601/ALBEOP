@@ -40,9 +40,7 @@ export function extractProposalReason(summary: string): string {
       .slice(0, 2)
       .map((s) => s.trim())
       .join(' ') || body;
-  return reason.length > PROPOSAL_REASON_MAX
-    ? `${reason.slice(0, PROPOSAL_REASON_MAX)}…`
-    : reason;
+  return reason.length > PROPOSAL_REASON_MAX ? `${reason.slice(0, PROPOSAL_REASON_MAX)}…` : reason;
 }
 
 /**
