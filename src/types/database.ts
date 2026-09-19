@@ -13,6 +13,8 @@ export interface Profile {
   interests: string[] | null;
   notify_time: string;
   notify_limit_per_day: number;
+  /** 나이대에 따라 자동으로 정해지는 콘텐츠 난이도 (10대 → 쉬움) */
+  difficulty?: string | null;
   created_at: string;
   /** DB 컬럼 아님 — UI 표시용 (데모 페르소나 이름) */
   display_name?: string;
