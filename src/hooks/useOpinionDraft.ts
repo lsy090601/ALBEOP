@@ -1,19 +1,40 @@
-import { useEffect, useMemo, useState } from 'react';
-import { getNoticeCardById, getOpinionByNoticeId, saveOpinion } from '../lib/demoStore';
+import { useCallback, useEffect, useState } from 'react';
+import { fetchNoticeCardById } from '../lib/noticeQueries';
 import type { NoticeCard, OpinionInterviewTurn, OpinionSummary } from '../types/database';
 import { useDemoStore } from './useDemoStore';
 import type { AsyncStatus } from './asyncStatus';
-import { simulateFetch } from './asyncStatus';
-
-const QUESTIONS = [
-  { field: 'situation', text: '지금 이 법안과 관련된 상황에 계신가요? 어떤 일을 하고 계세요?' },
-  { field: 'concern', text: '이 변화가 생기면 가장 먼저 어떤 점이 걱정되나요?' },
-  { field: 'suggestion', text: '이 문제를 해결하기 위한 대안이 있다면 알려주세요.' },
-  { field: 'related_clause', text: '관련된 조항이나 근거가 있다면 알려주세요. (선택)' },
-  { field: 'title', text: '의견 제목을 어떻게 정하면 좋을까요?' },
-] as const satisfies readonly { field: keyof OpinionSummary; text: string }[];
 
 const stanceLabels: Record<string, string> = { 찬성: '찬성', 우려: '우려', 수정: '수정 의견' };
+
+interface InterviewOpinionResponse {
+  ok: boolean;
+  opinion_id: string;
+  done: boolean;
+  next_question: string;
+  interview: OpinionInterviewTurn[];
+  error?: string;
+}
+
+interface DraftOpinionResponse {
+  ok: boolean;
+  opinion_id: string;
+  summary: OpinionSummary;
+  draft_text: string;
+  error?: string;
+}
+
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = (await res.json()) as T & { ok: boolean; error?: string };
+  if (!res.ok || !json.ok) {
+    throw new Error(json.error ?? `요청이 실패했어요 (HTTP ${res.status})`);
+  }
+  return json;
+}
 
 interface UseOpinionDraftResult {
   noticeCard: NoticeCard | null;
@@ -27,18 +48,23 @@ interface UseOpinionDraftResult {
   inputValue: string;
   setInputValue: (value: string) => void;
   submitAnswer: () => void;
+  isSubmittingAnswer: boolean;
   isComplete: boolean;
+  isDrafting: boolean;
+  draftError: string | null;
   draftSummary: OpinionSummary;
   draftText: string;
   isEditingDraft: boolean;
   toggleEditDraft: () => void;
   setDraftText: (value: string) => void;
+  saveDraftEdit: () => void;
   confirmDraft: () => void;
+  regenerateDraft: () => void;
 }
 
 /**
  * 의견 작성(P4) 인터뷰 + 초안 상태를 관리하는 훅.
- * 완료 시 demoStore.saveOpinion으로 저장한다(추후 Gemini/Supabase insert로 교체될 지점).
+ * interview-opinion/draft-opinion(/api)을 실제로 호출해 Gemini가 질문을 만들고 초안을 정리한다.
  */
 export function useOpinionDraft(
   noticeId: string | undefined,
@@ -47,9 +73,17 @@ export function useOpinionDraft(
   const { currentProfileId } = useDemoStore();
   const [status, setStatus] = useState<AsyncStatus>(noticeId ? 'loading' : 'error');
   const [noticeCard, setNoticeCard] = useState<NoticeCard | null>(null);
-  const [answers, setAnswers] = useState<string[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const [opinionId, setOpinionId] = useState<string | null>(null);
+  const [interview, setInterview] = useState<OpinionInterviewTurn[]>([]);
+  const [isComplete, setIsComplete] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
+
+  const [isDrafting, setIsDrafting] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [draftSummary, setDraftSummary] = useState<OpinionSummary>({});
+  const [serverDraftText, setServerDraftText] = useState('');
   const [isEditingDraft, setIsEditingDraft] = useState(false);
   const [manualDraftText, setManualDraftText] = useState<string | null>(null);
 
@@ -57,95 +91,149 @@ export function useOpinionDraft(
     if (!noticeId) return;
     let cancelled = false;
 
-    simulateFetch(() => ({
-      noticeCard: getNoticeCardById(noticeId) ?? null,
-      existing: currentProfileId ? getOpinionByNoticeId(currentProfileId, noticeId) : undefined,
-    })).then((result) => {
-      if (cancelled) return;
-      setNoticeCard(result.noticeCard);
-      if (result.existing?.summary) {
-        const seeded = QUESTIONS.map((q) => result.existing?.summary?.[q.field] ?? '');
-        setAnswers(seeded);
-        setCurrentIndex(QUESTIONS.length);
-      }
-      setStatus(result.noticeCard ? 'success' : 'error');
-    });
+    fetchNoticeCardById(noticeId, currentProfileId)
+      .then((card) => {
+        if (cancelled) return;
+        setNoticeCard(card);
+        setStatus(card ? 'success' : 'error');
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error');
+      });
 
     return () => {
       cancelled = true;
     };
   }, [noticeId, currentProfileId]);
 
-  const isComplete = currentIndex >= QUESTIONS.length;
-  const currentQuestion = QUESTIONS[Math.min(currentIndex, QUESTIONS.length - 1)].text;
-  const previousExchange =
-    currentIndex > 0 && answers[currentIndex - 1]
-      ? { question: QUESTIONS[currentIndex - 1].text, answer: answers[currentIndex - 1] }
-      : null;
+  // 법안 정보가 준비되면 첫 질문을 요청한다.
+  useEffect(() => {
+    if (status !== 'success' || !noticeId || !currentProfileId || opinionId) return;
+    let cancelled = false;
+
+    postJson<InterviewOpinionResponse>('/api/interview-opinion', {
+      notice_id: noticeId,
+      profile_id: currentProfileId,
+      stance,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        setOpinionId(res.opinion_id);
+        setInterview(res.interview);
+        setIsComplete(res.done);
+      })
+      .catch((err) => {
+        if (!cancelled) setDraftError(err instanceof Error ? err.message : String(err));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [status, noticeId, currentProfileId, opinionId, stance]);
+
+  const runDraft = useCallback(
+    (regenerate = false) => {
+      if (!noticeId || !currentProfileId) return;
+      setIsDrafting(true);
+      setDraftError(null);
+
+      postJson<DraftOpinionResponse>('/api/draft-opinion', {
+        notice_id: noticeId,
+        profile_id: currentProfileId,
+        regenerate,
+      })
+        .then((res) => {
+          setDraftSummary(res.summary);
+          setServerDraftText(res.draft_text);
+        })
+        .catch((err) => setDraftError(err instanceof Error ? err.message : String(err)))
+        .finally(() => setIsDrafting(false));
+    },
+    [noticeId, currentProfileId],
+  );
+
+  // 인터뷰가 끝나면 자동으로 초안 생성을 호출한다.
+  // (setTimeout으로 감싸 effect 본문에서 동기적으로 setState하지 않도록 한다)
+  useEffect(() => {
+    if (!isComplete || serverDraftText || isDrafting) return;
+    const timer = setTimeout(runDraft, 0);
+    return () => clearTimeout(timer);
+  }, [isComplete, serverDraftText, isDrafting, runDraft]);
 
   function submitAnswer() {
-    if (!inputValue.trim() || isComplete) return;
-    setAnswers((prev) => {
-      const next = [...prev];
-      next[currentIndex] = inputValue.trim();
-      return next;
-    });
+    if (!inputValue.trim() || isComplete || !noticeId || !currentProfileId || isSubmittingAnswer) return;
+    const answer = inputValue.trim();
+    setIsSubmittingAnswer(true);
     setInputValue('');
-    setCurrentIndex((i) => i + 1);
+
+    postJson<InterviewOpinionResponse>('/api/interview-opinion', {
+      notice_id: noticeId,
+      profile_id: currentProfileId,
+      stance,
+      answer,
+    })
+      .then((res) => {
+        setInterview(res.interview);
+        setIsComplete(res.done);
+      })
+      .catch((err) => setDraftError(err instanceof Error ? err.message : String(err)))
+      .finally(() => setIsSubmittingAnswer(false));
   }
 
-  const draftSummary: OpinionSummary = useMemo(() => {
-    const summary: OpinionSummary = {};
-    QUESTIONS.forEach((q, i) => {
-      if (answers[i]) summary[q.field] = answers[i];
-    });
-    return summary;
-  }, [answers]);
+  const completedTurns = interview.filter((t) => t.answer);
+  const pendingTurn = interview.find((t) => !t.answer);
+  const currentQuestion = pendingTurn?.question ?? '';
+  const previousExchange =
+    completedTurns.length > 0 ? completedTurns[completedTurns.length - 1] : null;
+  const totalQuestions = completedTurns.length + (isComplete ? 0 : 1);
+  const currentIndex = Math.min(completedTurns.length, totalQuestions - 1);
 
-  const draftText =
-    manualDraftText ?? [draftSummary.concern, draftSummary.suggestion].filter(Boolean).join(' ');
+  const draftText = manualDraftText ?? serverDraftText;
+
+  function saveDraftEdit() {
+    if (!noticeId || !currentProfileId || manualDraftText === null) return;
+    postJson<DraftOpinionResponse>('/api/draft-opinion', {
+      notice_id: noticeId,
+      profile_id: currentProfileId,
+      draft_text: manualDraftText,
+    })
+      .then((res) => setServerDraftText(res.draft_text))
+      .catch((err) => setDraftError(err instanceof Error ? err.message : String(err)));
+  }
 
   function confirmDraft() {
-    if (!noticeId || !currentProfileId) return;
-    const interview: OpinionInterviewTurn[] = QUESTIONS.map((q, i) => ({
-      question: q.text,
-      answer: answers[i] ?? '',
-    })).filter((t) => t.answer);
+    if (manualDraftText !== null) saveDraftEdit();
+  }
 
-    saveOpinion({
-      id: `opinion-${currentProfileId}-${noticeId}`,
-      user_id: currentProfileId,
-      notice_id: noticeId,
-      stance,
-      status: 'draft_confirmed',
-      interview,
-      draft_text: draftText,
-      summary: draftSummary,
-      submitted: false,
-      last_tracking_status: '입법예고 종료',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+  function regenerateDraft() {
+    setManualDraftText(null);
+    setIsEditingDraft(false);
+    runDraft(true);
   }
 
   return {
     noticeCard,
     status,
-    draftOpinionId: noticeId && currentProfileId ? `opinion-${currentProfileId}-${noticeId}` : null,
+    draftOpinionId: opinionId,
     stanceLabel: stance ? (stanceLabels[stance] ?? stance) : '수정 의견',
-    totalQuestions: QUESTIONS.length,
-    currentIndex: Math.min(currentIndex, QUESTIONS.length - 1),
+    totalQuestions,
+    currentIndex,
     currentQuestion,
     previousExchange,
     inputValue,
     setInputValue,
     submitAnswer,
+    isSubmittingAnswer,
     isComplete,
+    isDrafting,
+    draftError,
     draftSummary,
     draftText,
     isEditingDraft,
     toggleEditDraft: () => setIsEditingDraft((v) => !v),
     setDraftText: setManualDraftText,
+    saveDraftEdit,
     confirmDraft,
+    regenerateDraft,
   };
 }

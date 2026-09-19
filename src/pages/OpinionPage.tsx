@@ -31,18 +31,28 @@ export default function OpinionPage() {
     inputValue,
     setInputValue,
     submitAnswer,
+    isSubmittingAnswer,
     isComplete,
+    isDrafting,
+    draftError,
     draftSummary,
     isEditingDraft,
     toggleEditDraft,
     draftText,
     setDraftText,
+    saveDraftEdit,
     confirmDraft,
+    regenerateDraft,
   } = useOpinionDraft(id, stance);
 
   function goToSubmit() {
     confirmDraft();
     if (draftOpinionId) navigate(`/opinion/${draftOpinionId}/submit`);
+  }
+
+  function handleToggleEdit() {
+    if (isEditingDraft) saveDraftEdit();
+    toggleEditDraft();
   }
 
   return (
@@ -105,10 +115,17 @@ export default function OpinionPage() {
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder="답변을 입력하세요"
                   rows={2}
-                  className="w-full rounded-[10px] border border-border px-4 py-[14px] text-[13px] text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-navy"
+                  disabled={isSubmittingAnswer || !currentQuestion}
+                  className="w-full rounded-[10px] border border-border px-4 py-[14px] text-[13px] text-ink placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-navy disabled:opacity-60"
                 />
-                <Button variant="primary" size="sm" onClick={submitAnswer} className="w-fit">
-                  다음 질문
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={submitAnswer}
+                  disabled={isSubmittingAnswer || !currentQuestion}
+                  className="w-fit"
+                >
+                  {isSubmittingAnswer ? '질문 준비 중...' : '다음 질문'}
                 </Button>
               </>
             ) : (
@@ -116,6 +133,8 @@ export default function OpinionPage() {
                 모든 질문에 답해 주셔서 감사해요. 오른쪽 초안을 확인해 주세요.
               </p>
             )}
+
+            {draftError && <p className="text-[12px] font-medium text-red-600">{draftError}</p>}
           </div>
 
           <div className="flex w-[580px] shrink-0 flex-col gap-4 border border-border bg-white px-10 pb-8 pt-10">
@@ -125,6 +144,9 @@ export default function OpinionPage() {
             </p>
 
             <div className="flex flex-col gap-3">
+              {isDrafting && (
+                <p className="text-[12px] font-medium text-navy">AI가 초안을 정리하고 있어요...</p>
+              )}
               {Object.entries(fieldLabels).map(([key, label]) =>
                 draftSummary[key as keyof typeof draftSummary] ? (
                   <div key={key} className="flex flex-col gap-1 border-b border-border pb-3">
@@ -135,7 +157,7 @@ export default function OpinionPage() {
                   </div>
                 ) : null,
               )}
-              {Object.keys(draftSummary).length === 0 && (
+              {!isDrafting && Object.keys(draftSummary).length === 0 && (
                 <p className="text-[12px] text-muted">답변을 입력하면 이 자리에 초안이 채워져요.</p>
               )}
             </div>
@@ -152,10 +174,23 @@ export default function OpinionPage() {
             <NoticeBanner variant="compact" />
 
             <div className="flex gap-2.5">
-              <Button variant="secondary" size="md" onClick={toggleEditDraft}>
-                직접 수정하기
+              <Button variant="secondary" size="md" onClick={handleToggleEdit} disabled={!draftText}>
+                {isEditingDraft ? '수정 저장하기' : '직접 수정하기'}
               </Button>
-              <Button variant="primary" size="md" onClick={goToSubmit} disabled={!isComplete}>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={regenerateDraft}
+                disabled={!draftText || isDrafting || isEditingDraft}
+              >
+                다시 만들기
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={goToSubmit}
+                disabled={!isComplete || isDrafting || !draftText}
+              >
                 제출 안내로 이동
               </Button>
             </div>
