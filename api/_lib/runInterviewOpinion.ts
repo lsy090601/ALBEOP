@@ -81,11 +81,23 @@ export async function runInterviewOpinion(
 
   const { data: existing, error: fetchError } = await supabaseAdmin
     .from('opinions')
-    .select('id, stance, interview')
+    .select('id, stance, status, interview')
     .eq('user_id', profileId)
     .eq('notice_id', noticeId)
     .maybeSingle();
   if (fetchError) throw new Error(`opinions 조회 실패: ${fetchError.message}`);
+
+  // 이미 초안이 확정/제출된 의견이면(재생성을 명시적으로 요청한 게 아니라 P4를 다시 연 것뿐이라면)
+  // Gemini에게 "계속할지" 다시 묻지 않는다 — 그 판단이 비결정적이라 이미 끝난 인터뷰를
+  // 다시 열어버릴 수 있어서다. 확정된 대화 그대로 done=true를 돌려준다.
+  if (existing && (existing.status === 'draft_confirmed' || existing.status === 'submitted')) {
+    return {
+      opinion_id: existing.id as string,
+      done: true,
+      next_question: '',
+      interview: (existing.interview as InterviewTurn[] | null) ?? [],
+    };
+  }
 
   let opinionId: string;
   let stance: string;

@@ -1,13 +1,8 @@
 import { useEffect, useState } from 'react';
-import {
-  getNoticeCardById,
-  getNotificationsForProfile,
-  markNotificationRead,
-} from '../lib/demoStore';
+import { markNotificationRead } from '../lib/demoStore';
 import type { AppNotification, NoticeCard } from '../types/database';
 import { useDemoStore } from './useDemoStore';
 import type { AsyncStatus } from './asyncStatus';
-import { simulateFetch } from './asyncStatus';
 
 export interface NotificationEntry {
   notification: AppNotification;
@@ -21,26 +16,48 @@ interface UseNotificationsResult {
   markRead: (id: string) => void;
 }
 
-/** 알림함(P7) 데이터 로직: 현재 프로필의 알림 목록과 읽음 처리를 담당한다. */
+interface NotificationsResponse {
+  ok: boolean;
+  entries: { notification: AppNotification; noticeCard: NoticeCard | null }[];
+  error?: string;
+}
+
+/**
+ * 알림함(P7) 데이터 로직: 실제 notifications를 조회한다.
+ * (notifications도 RLS 때문에 브라우저에서 직접 못 읽어 /api/notifications가 대신 읽어준다)
+ */
 export function useNotifications(): UseNotificationsResult {
-  const { currentProfileId, notifications } = useDemoStore();
+  const { currentProfileId, voiceVersion } = useDemoStore();
   const [status, setStatus] = useState<AsyncStatus>('loading');
   const [entries, setEntries] = useState<NotificationEntry[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
-    simulateFetch(() =>
-      getNotificationsForProfile(currentProfileId).map((notification) => ({
-        notification,
-        noticeCard: notification.related_notice_id
-          ? getNoticeCardById(notification.related_notice_id)
-          : undefined,
-      })),
-    )
-      .then((result) => {
+    if (!currentProfileId) {
+      // effect 본문에서 동기적으로 setState하지 않도록 setTimeout으로 감싼다.
+      const timer = setTimeout(() => {
         if (cancelled) return;
-        setEntries(result);
+        setEntries([]);
+        setStatus('success');
+      }, 0);
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
+    }
+
+    fetch(`/api/notifications?profile_id=${encodeURIComponent(currentProfileId)}`)
+      .then((res) => res.json() as Promise<NotificationsResponse>)
+      .then((json) => {
+        if (cancelled) return;
+        if (!json.ok) throw new Error(json.error);
+        setEntries(
+          json.entries.map(({ notification, noticeCard }) => ({
+            notification,
+            noticeCard: noticeCard ?? undefined,
+          })),
+        );
         setStatus('success');
       })
       .catch(() => {
@@ -50,7 +67,7 @@ export function useNotifications(): UseNotificationsResult {
     return () => {
       cancelled = true;
     };
-  }, [currentProfileId, notifications]);
+  }, [currentProfileId, voiceVersion]);
 
   return {
     entries,

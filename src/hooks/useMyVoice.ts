@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
-import { getNoticeCardById, getOpinionsForProfile } from '../lib/demoStore';
 import { getTrackingStepIndex } from '../lib/mockData';
 import type { NoticeCard, Opinion } from '../types/database';
 import { useDemoStore } from './useDemoStore';
 import type { AsyncStatus } from './asyncStatus';
-import { simulateFetch } from './asyncStatus';
 
 export interface VoiceEntry {
   opinion: Opinion;
@@ -17,36 +15,49 @@ interface UseMyVoiceResult {
   status: AsyncStatus;
 }
 
-/** 내 목소리(P6) 데이터 로직: 현재 프로필의 의견 + 연결된 법안 + 진행 단계를 계산한다. */
+interface MyVoiceResponse {
+  ok: boolean;
+  entries: { opinion: Opinion; noticeCard: NoticeCard | null }[];
+  error?: string;
+}
+
+/**
+ * 내 목소리(P6) 데이터 로직: 실제 opinions + notices/cards를 조회해 진행 단계를 계산한다.
+ * (opinions는 RLS 때문에 브라우저에서 직접 못 읽어 /api/my-voice가 서비스 롤로 대신 읽어준다)
+ */
 export function useMyVoice(): UseMyVoiceResult {
-  const { currentProfileId, opinions } = useDemoStore();
+  const { currentProfileId, voiceVersion } = useDemoStore();
   const [status, setStatus] = useState<AsyncStatus>('loading');
   const [entries, setEntries] = useState<VoiceEntry[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
-    simulateFetch(() => {
-      const all = getOpinionsForProfile(currentProfileId);
-      // 제출된 의견은 항상 그대로 보여주고, 임시저장 초안끼리만 notice_id당 최신 1건으로 줄인다.
-      const submitted = all.filter((o) => o.status === 'submitted');
-      const latestDraftByNotice = new Map<string, Opinion>();
-      for (const opinion of all) {
-        if (opinion.status === 'submitted') continue;
-        const prev = latestDraftByNotice.get(opinion.notice_id);
-        if (!prev || opinion.updated_at > prev.updated_at) {
-          latestDraftByNotice.set(opinion.notice_id, opinion);
-        }
-      }
-      return [...submitted, ...latestDraftByNotice.values()].map((opinion) => ({
-        opinion,
-        noticeCard: getNoticeCardById(opinion.notice_id),
-        trackingIndex: getTrackingStepIndex(opinion.last_tracking_status),
-      }));
-    })
-      .then((result) => {
+    if (!currentProfileId) {
+      // effect 본문에서 동기적으로 setState하지 않도록 setTimeout으로 감싼다.
+      const timer = setTimeout(() => {
         if (cancelled) return;
-        setEntries(result);
+        setEntries([]);
+        setStatus('success');
+      }, 0);
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
+    }
+
+    fetch(`/api/my-voice?profile_id=${encodeURIComponent(currentProfileId)}`)
+      .then((res) => res.json() as Promise<MyVoiceResponse>)
+      .then((json) => {
+        if (cancelled) return;
+        if (!json.ok) throw new Error(json.error);
+        setEntries(
+          json.entries.map(({ opinion, noticeCard }) => ({
+            opinion,
+            noticeCard: noticeCard ?? undefined,
+            trackingIndex: getTrackingStepIndex(opinion.last_tracking_status),
+          })),
+        );
         setStatus('success');
       })
       .catch(() => {
@@ -56,8 +67,8 @@ export function useMyVoice(): UseMyVoiceResult {
     return () => {
       cancelled = true;
     };
-    // opinions가 바뀌면(시간경과 시뮬레이션) 진행 단계도 다시 계산한다.
-  }, [currentProfileId, opinions]);
+    // voiceVersion이 바뀌면(시간경과 시뮬레이션 등) 진행 단계도 다시 불러온다.
+  }, [currentProfileId, voiceVersion]);
 
   return { entries, status };
 }

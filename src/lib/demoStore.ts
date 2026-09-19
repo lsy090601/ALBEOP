@@ -8,10 +8,7 @@ import {
   NOTICE_JUHYU_ID,
   NOTICE_WOLSE_ID,
   NOTICE_YOUTH_CONTRACT_ID,
-  TRACKING_STEPS,
   getRelatedNoticeCards,
-  getTrackingStepIndex,
-  seedCards,
 } from './mockData';
 import type { AgentLog, AppNotification, Opinion } from '../types/database';
 
@@ -156,6 +153,9 @@ interface DemoState {
   opinions: Opinion[];
   notifications: AppNotification[];
   agentLogs: AgentLog[];
+  /** P6/P7(내 목소리/알림함)이 실제 Supabase를 읽으므로, 데모 액션이 그쪽 데이터를 바꿨을 때
+   * 이 값을 올려서 useMyVoice/useNotifications가 다시 불러오게 만든다. */
+  voiceVersion: number;
 }
 
 function initialState(): DemoState {
@@ -165,6 +165,7 @@ function initialState(): DemoState {
     opinions: seedOpinions,
     notifications: seedNotifications,
     agentLogs: seedAgentLogs,
+    voiceVersion: 0,
   };
 }
 
@@ -195,17 +196,6 @@ export function getOpinionsForProfile(profileId: string | null): Opinion[] {
   return state.opinions.filter((o) => o.user_id === profileId);
 }
 
-export function getOpinionByNoticeId(
-  profileId: string | null,
-  noticeId: string,
-): Opinion | undefined {
-  return state.opinions.find((o) => o.user_id === profileId && o.notice_id === noticeId);
-}
-
-export function getOpinionById(id: string): Opinion | undefined {
-  return state.opinions.find((o) => o.id === id);
-}
-
 export function getNotificationsForProfile(profileId: string | null): AppNotification[] {
   return state.notifications
     .filter((n) => n.user_id === profileId)
@@ -214,15 +204,6 @@ export function getNotificationsForProfile(profileId: string | null): AppNotific
 
 export function getAgentLogs(): AgentLog[] {
   return [...state.agentLogs].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-}
-
-export function saveOpinion(opinion: Opinion) {
-  const exists = state.opinions.some((o) => o.id === opinion.id);
-  setState({
-    opinions: exists
-      ? state.opinions.map((o) => (o.id === opinion.id ? opinion : o))
-      : [...state.opinions, opinion],
-  });
 }
 
 // ---------- 데모 패널 액션 ----------
@@ -305,48 +286,35 @@ export function advanceDay() {
   setState({ notifications: [...state.notifications, notif] });
 }
 
-/** "시간경과(위원회심사)" — 현재 프로필의 의견 진행 단계를 한 단계 진행시킨다. */
+/**
+ * "시간경과(위원회심사)" — 현재 프로필의 진행 중인 의견 하나를 다음 단계로 강제 이동시킨다.
+ * track-status(실제 ALLBILLV2 조회)를 부르는 대신 /api/track-status의 데모 전용 경로를 호출한다
+ * — 실제 API가 시연 타이밍에 아직 안 바뀌어 있을 수 있어서 시연용은 별도로 유지한다.
+ * P6/P7이 이제 real Supabase를 읽으므로, 반영 후 voiceVersion을 올려 다시 불러오게 한다.
+ */
 export function advanceCommittee() {
   const profileId = state.currentProfileId;
   if (!profileId) return;
-  const opinion = state.opinions.find(
-    (o) =>
-      o.user_id === profileId &&
-      o.submitted &&
-      getTrackingStepIndex(o.last_tracking_status) < TRACKING_STEPS.length - 1,
-  );
-  if (!opinion) return;
 
-  const nextIndex = getTrackingStepIndex(opinion.last_tracking_status) + 1;
-  const nextStatus = TRACKING_STEPS[nextIndex];
-  const updatedOpinion: Opinion = {
-    ...opinion,
-    last_tracking_status: nextStatus,
-    updated_at: new Date().toISOString(),
-  };
-
-  const card = seedCards.find((c) => c.notice_id === opinion.notice_id);
-  const notif: AppNotification = {
-    id: uid('notif'),
-    user_id: profileId,
-    type: 'progress',
-    message: `"${card?.easy_title ?? '내 법안'}" 법안이 ${nextStatus} 단계로 이동했어요.`,
-    related_notice_id: opinion.notice_id,
-    related_opinion_id: opinion.id,
-    is_read: false,
-    created_at: new Date().toISOString(),
-  };
-
-  setState({
-    opinions: state.opinions.map((o) => (o.id === opinion.id ? updatedOpinion : o)),
-    notifications: [...state.notifications, notif],
-  });
+  fetch(`/api/track-status?demo_advance_profile_id=${encodeURIComponent(profileId)}`)
+    .then((res) => res.json())
+    .then((json) => {
+      if (json.ok && json.advanced) {
+        setState({ voiceVersion: state.voiceVersion + 1 });
+      }
+    })
+    .catch((err) => console.error('advanceCommittee failed:', err));
 }
 
+/** 알림함(P7)의 실제 notifications 행을 읽음 처리한다. */
 export function markNotificationRead(id: string) {
-  setState({
-    notifications: state.notifications.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
-  });
+  fetch('/api/notifications', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  })
+    .then(() => setState({ voiceVersion: state.voiceVersion + 1 }))
+    .catch((err) => console.error('markNotificationRead failed:', err));
 }
 
 export function resetDemo() {
