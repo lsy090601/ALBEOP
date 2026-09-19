@@ -5,11 +5,11 @@ import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import NoticeBanner from '../components/NoticeBanner';
 import { useNoticeDetail } from '../hooks/useNoticeDetail';
-import { getDaysUntil } from '../lib/mockData';
+import { formatDDay, getDaysUntil } from '../lib/mockData';
 
 export default function NoticeDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { noticeCard, isRelevantToCurrentProfile, status } = useNoticeDetail(id);
+  const { noticeCard, status } = useNoticeDetail(id);
   const navigate = useNavigate();
 
   return (
@@ -31,7 +31,7 @@ export default function NoticeDetailPage() {
         {status === 'success' && noticeCard && (
           <div className="flex flex-col gap-[22px]">
             <p className="text-[12px] font-bold text-navy">
-              {noticeCard.card.category} · 마감 D-{getDaysUntil(noticeCard.notice.notice_end)}
+              {noticeCard.card.category} · {formatDDay(getDaysUntil(noticeCard.notice.notice_end))}
             </p>
             <h1 className="text-[30px] font-bold leading-[1.55] text-ink">
               {noticeCard.card.easy_title}
@@ -64,7 +64,7 @@ export default function NoticeDetailPage() {
               </>
             )}
 
-            {isRelevantToCurrentProfile && noticeCard.card.relevance_reason && (
+            {noticeCard.card.relevance_reason && (
               <div className="flex flex-col gap-2 rounded-xl bg-navy p-[18px] text-white">
                 <p className="text-[11px] font-bold">나에게 중요한 이유</p>
                 <p className="text-[14px] font-medium leading-[1.55]">

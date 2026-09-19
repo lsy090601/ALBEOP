@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useDemoStore } from '../hooks/useDemoStore';
-import { CHAEWON_ID, DOYOON_ID, getProfileById } from '../lib/mockData';
+import { CHAEWON_ID, DOYOON_ID, describeProfileName, getProfileById } from '../lib/mockData';
 
 const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
 
@@ -14,9 +14,9 @@ export default function DemoPanel() {
 
   if (!isDemoMode) return null;
 
-  const currentProfile = getProfileById(store.currentProfileId);
   const otherId = store.currentProfileId === CHAEWON_ID ? DOYOON_ID : CHAEWON_ID;
   const otherProfile = getProfileById(otherId);
+  const currentName = describeProfileName(store.currentProfileId);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 w-[260px] rounded-xl border border-navy bg-white shadow-lg">
@@ -32,8 +32,7 @@ export default function DemoPanel() {
       {open && (
         <div className="flex flex-col gap-2.5 p-4 text-[12px]">
           <p className="text-[11px] text-muted">
-            현재 프로필:{' '}
-            <span className="font-bold text-ink">{currentProfile?.display_name ?? '없음'}</span>
+            현재 프로필: <span className="font-bold text-ink">{currentName ?? '없음'}</span>
           </p>
 
           <button
@@ -41,8 +40,7 @@ export default function DemoPanel() {
             onClick={() => store.switchProfile(otherId)}
             className="rounded-md border border-border px-3 py-2 text-left font-medium text-ink hover:bg-surface"
           >
-            프로필 전환 ({currentProfile?.display_name ?? '?'} ↔ {otherProfile?.display_name ?? '?'}
-            )
+            프로필 전환 ({currentName ?? '?'} ↔ {otherProfile?.display_name ?? '?'})
           </button>
 
           <button

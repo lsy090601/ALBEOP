@@ -1,6 +1,6 @@
 import { ButtonLink } from './Button';
 import type { NoticeCard } from '../types/database';
-import { getDaysUntil } from '../lib/mockData';
+import { formatDDay, getDaysUntil } from '../lib/mockData';
 
 interface CardProps {
   noticeCard: NoticeCard;
@@ -14,7 +14,7 @@ export default function Card({ noticeCard, userName = '님' }: CardProps) {
   return (
     <div className="flex flex-1 flex-col gap-2.5 rounded-xl border border-border bg-white p-[18px]">
       <p className="text-[11px] font-bold text-navy">
-        {card.category} · 마감 D-{dDay}
+        {card.category} · {formatDDay(dDay)}
       </p>
       <p className="text-[15px] font-bold leading-[1.55] text-ink">{card.easy_title}</p>
       <p className="text-[12px] leading-[1.55] text-muted">{card.one_line}</p>

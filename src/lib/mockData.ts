@@ -38,6 +38,13 @@ export function getDaysUntil(dateStr: string | null): number | null {
   return Math.round((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+/** D-day를 화면 표시용 문구로 바꾼다. 음수(마감 지남)일 때 "D--1"처럼 깨지지 않게 한다. */
+export function formatDDay(dDay: number | null): string {
+  if (dDay === null) return '마감일 미정';
+  if (dDay < 0) return '마감 지남';
+  return `마감 D-${dDay}`;
+}
+
 export function getRelativeTime(dateStr: string): string {
   const then = new Date(dateStr).getTime();
   const now = Date.now();
@@ -89,6 +96,17 @@ export function getProfiles(): Profile[] {
 
 export function getProfileById(id: string | null): Profile | undefined {
   return seedProfiles.find((p) => p.id === id);
+}
+
+/**
+ * 화면에 표시할 안전한 이름. currentProfileId가 데모 페르소나(채원/도윤)면 그 이름을,
+ * 그 외(예: /start의 ProfileForm으로 실제 Supabase profiles에 만들어진 진짜 사용자)라면
+ * "undefined"가 그대로 노출되지 않도록 일반 문구로 대체한다.
+ * (ProfileForm은 이름/닉네임을 받지 않으므로 진짜 이름을 알 방법이 없다 — 스키마에 없음)
+ */
+export function describeProfileName(id: string | null): string | null {
+  if (!id) return null;
+  return getProfileById(id)?.display_name ?? '회원';
 }
 
 // ---------- 입법예고 / 카드 ----------

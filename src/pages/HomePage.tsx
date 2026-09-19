@@ -7,20 +7,17 @@ import EmptyState from '../components/EmptyState';
 import { Button } from '../components/Button';
 import { useHomeData } from '../hooks/useHomeData';
 import { useDemoStore } from '../hooks/useDemoStore';
-import { getDaysUntil, getProfileById } from '../lib/mockData';
+import { describeProfileName, formatDDay, getDaysUntil } from '../lib/mockData';
 
 export default function HomePage() {
   const { currentProfileId } = useDemoStore();
-  const profile = getProfileById(currentProfileId);
-  const { status, relatedCards, otherCards, latestRunLabel, reload } = useHomeData();
+  const displayName = describeProfileName(currentProfileId);
+  const { status, relatedCards, otherNotices, otherNoticesTotalCount, latestRunLabel, reload } =
+    useHomeData();
 
   return (
     <div className="min-h-screen bg-page">
-      <Navbar
-        mode="app"
-        active="home"
-        trailing={profile ? `${profile.display_name} 님` : undefined}
-      />
+      <Navbar mode="app" active="home" trailing={displayName ? `${displayName} 님` : undefined} />
       <div className="mx-auto flex w-[1040px] max-w-full flex-col gap-[26px] bg-white pb-[60px] pt-[42px]">
         {!currentProfileId ? (
           <EmptyState
@@ -35,7 +32,7 @@ export default function HomePage() {
             <div className="flex items-start justify-between">
               <div className="flex flex-col gap-[7px]">
                 <p className="text-[12px] font-bold text-navy">
-                  오늘, {profile?.display_name} 님에게 닿은 변화
+                  오늘, {displayName} 님에게 닿은 변화
                 </p>
                 <h1 className="text-[32px] font-bold text-ink">
                   {status === 'success'
@@ -82,7 +79,7 @@ export default function HomePage() {
               relatedCards.length > 0 && (
                 <div className="flex w-full gap-3.5">
                   {relatedCards.map((nc) => (
-                    <Card key={nc.notice.id} noticeCard={nc} userName={profile?.display_name} />
+                    <Card key={nc.notice.id} noticeCard={nc} userName={displayName ?? undefined} />
                   ))}
                 </div>
               )}
@@ -90,7 +87,7 @@ export default function HomePage() {
             {status === 'success' && relatedCards && relatedCards.length === 0 && (
               <EmptyState
                 eyebrow="관련 법안 0건"
-                title={`오늘은 ${profile?.display_name} 님과 관련된 새 입법예고가 없어요.`}
+                title={`오늘은 ${displayName} 님과 관련된 새 입법예고가 없어요.`}
                 body="새 법안이 올라오면 바로 알려드릴게요."
                 actionLabel="다른 입법예고 보기"
                 actionTo="#"
@@ -98,28 +95,36 @@ export default function HomePage() {
             )}
 
             {(status === 'success' || status === 'error') &&
-              otherCards &&
-              otherCards.length > 0 && (
+              otherNotices &&
+              otherNotices.length > 0 && (
                 <>
-                  <p className="text-[16px] font-bold text-ink">관련성이 낮아 걸러진 법안</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[16px] font-bold text-ink">관련성이 낮아 걸러진 법안</p>
+                    <p className="text-[12px] text-faint">전체 {otherNoticesTotalCount}건</p>
+                  </div>
                   <div className="flex w-full flex-col rounded-[10px] border border-border">
-                    {otherCards.map((nc, i) => (
+                    {otherNotices.map((notice, i) => (
                       <Link
-                        key={nc.notice.id}
-                        to={`/notice/${nc.notice.id}`}
+                        key={notice.id}
+                        to={`/notice/${notice.id}`}
                         className={`flex items-center gap-4 px-4 py-3 ${i > 0 ? 'border-t border-border' : ''}`}
                       >
-                        <p className="text-[12px] font-medium text-ink">{nc.card.easy_title}</p>
+                        <p className="text-[12px] font-medium text-ink">
+                          {(notice.raw_data?.BILL_NAME as string | undefined) ?? notice.bill_id}
+                        </p>
                         <div className="h-px flex-1 bg-border" />
                         <p className="shrink-0 text-[11px] text-muted">
-                          {nc.notice.committee} · D-{getDaysUntil(nc.notice.notice_end)}
+                          {notice.committee} · {formatDDay(getDaysUntil(notice.notice_end))}
                         </p>
                       </Link>
                     ))}
                   </div>
-                  <Button variant="secondary" size="sm">
-                    더 보기
-                  </Button>
+                  {otherNoticesTotalCount !== undefined &&
+                    otherNoticesTotalCount > otherNotices.length && (
+                      <Button variant="secondary" size="sm">
+                        {otherNoticesTotalCount - otherNotices.length}건 더 보기
+                      </Button>
+                    )}
                 </>
               )}
           </>
