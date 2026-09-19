@@ -1,34 +1,45 @@
-// notices/cards 실제 Supabase 조회. mockData.ts의 시드 데이터를 대체한다.
-//
-// TODO(explain-impact): cards에는 아직 "이 카드가 어느 프로필과 관련 있는지"를 저장하는
-// 필드가 없다. 지금은 make-card가 만든 카드(easy_title이 채워진 것)가 있으면
-// 현재 선택된 프로필이 누구든 동일하게 "관련 있음"으로 보여준다. 프로필별로 다르게
-// 보여주는 정교한 매칭은 다음 단계 explain-impact에서 만든다.
+// notices/cards/card_impacts 실제 Supabase 조회. mockData.ts의 시드 데이터를 대체한다.
 
 import { supabase } from './supabase';
-import type { Card, Notice, NoticeCard } from '../types/database';
+import type { Card, CardImpact, Notice, NoticeCard } from '../types/database';
 
 type CardWithNotice = Card & { notices: Notice | null };
+type ImpactWithCard = CardImpact & { cards: CardWithNotice | null };
 
-function toNoticeCard(row: CardWithNotice): NoticeCard | null {
-  if (!row.notices) return null;
-  const { notices: notice, ...card } = row;
-  return { notice, card };
+function toNoticeCardFromImpact(row: ImpactWithCard): NoticeCard | null {
+  if (!row.cards || !row.cards.notices) return null;
+  const { notices: notice, ...card } = row.cards;
+  const impact: CardImpact = {
+    id: row.id,
+    card_id: row.card_id,
+    profile_id: row.profile_id,
+    is_relevant: row.is_relevant,
+    impact_text: row.impact_text,
+    calculation_basis: row.calculation_basis,
+    created_at: row.created_at,
+  };
+  return { notice, card, impact };
 }
 
-/** make-card가 관련 있다고 확정한(easy_title이 채워진) 카드 전체를 관련성 순으로 가져온다. */
-export async function fetchRelatedNoticeCards(): Promise<NoticeCard[]> {
-  const { data, error } = await supabase
-    .from('cards')
-    .select(
-      'id, notice_id, category, relevance_score, relevance_reason, easy_title, one_line, before_text, after_text, pros, cons, created_at, notices(*)',
-    )
-    .not('easy_title', 'is', null)
-    .order('relevance_score', { ascending: false });
+/**
+ * 현재 프로필 기준으로 explain-impact가 "해당(is_relevant=true)"으로 확정한 카드만 가져온다.
+ * profileId가 없으면(아직 프로필 미선택) 개인화할 수 없으니 빈 배열을 돌려준다.
+ */
+export async function fetchRelatedNoticeCards(profileId: string | null): Promise<NoticeCard[]> {
+  if (!profileId) return [];
 
-  if (error) throw new Error(`cards 조회 실패: ${error.message}`);
-  return ((data ?? []) as unknown as CardWithNotice[])
-    .map(toNoticeCard)
+  const { data, error } = await supabase
+    .from('card_impacts')
+    .select(
+      'id, card_id, profile_id, is_relevant, impact_text, calculation_basis, created_at, cards(id, notice_id, category, relevance_score, relevance_reason, easy_title, one_line, before_text, after_text, pros, cons, created_at, notices(*))',
+    )
+    .eq('profile_id', profileId)
+    .eq('is_relevant', true)
+    .order('relevance_score', { foreignTable: 'cards', ascending: false });
+
+  if (error) throw new Error(`card_impacts 조회 실패: ${error.message}`);
+  return ((data ?? []) as unknown as ImpactWithCard[])
+    .map(toNoticeCardFromImpact)
     .filter((v): v is NoticeCard => v !== null);
 }
 
@@ -40,8 +51,8 @@ export interface OtherNoticesResult {
 }
 
 /**
- * 완성된 카드가 없는(아직 판단 전이거나 제외된) 입법예고 — "관련성이 낮아 걸러진 법안" 목록용.
- * 실제 수집 건수가 수백 건일 수 있어 화면에는 상위 일부만 보여주고 전체 건수는 따로 반환한다.
+ * 현재 프로필에게 "해당"으로 확정되지 않은(아직 판단 전 · 확인 필요 · 해당없음 · 카드 자체가 없는)
+ * 입법예고 — "관련성이 낮아 걸러진 법안" 목록용. 화면에는 상위 일부만 보여주고 전체 건수는 따로 반환한다.
  */
 export async function fetchOtherNotices(excludeNoticeIds: string[]): Promise<OtherNoticesResult> {
   let query = supabase
@@ -58,8 +69,14 @@ export async function fetchOtherNotices(excludeNoticeIds: string[]): Promise<Oth
   return { notices: (data ?? []) as Notice[], totalCount: count ?? 0 };
 }
 
-/** notice_id 하나로 notices+cards 조인 결과를 가져온다 (P3 상세 화면용). */
-export async function fetchNoticeCardById(noticeId: string): Promise<NoticeCard | null> {
+/**
+ * notice_id 하나로 notices+cards를 가져오고, profileId가 있으면 그 프로필의 card_impacts도 붙인다
+ * (P3 상세 화면용 — "나의 경우" 섹션은 impact_text/calculation_basis를 쓴다).
+ */
+export async function fetchNoticeCardById(
+  noticeId: string,
+  profileId: string | null,
+): Promise<NoticeCard | null> {
   const { data: notice, error: noticeError } = await supabase
     .from('notices')
     .select('*')
@@ -77,5 +94,17 @@ export async function fetchNoticeCardById(noticeId: string): Promise<NoticeCard 
   if (cardError) throw new Error(`cards 조회 실패: ${cardError.message}`);
   if (!card) return null;
 
-  return { notice: notice as Notice, card: card as Card };
+  let impact: CardImpact | null = null;
+  if (profileId) {
+    const { data: impactRow, error: impactError } = await supabase
+      .from('card_impacts')
+      .select('*')
+      .eq('card_id', card.id)
+      .eq('profile_id', profileId)
+      .maybeSingle();
+    if (impactError) throw new Error(`card_impacts 조회 실패: ${impactError.message}`);
+    impact = impactRow as CardImpact | null;
+  }
+
+  return { notice: notice as Notice, card: card as Card, impact };
 }

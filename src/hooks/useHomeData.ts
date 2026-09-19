@@ -18,12 +18,11 @@ interface UseHomeDataResult extends Partial<HomeData> {
 }
 
 /**
- * 홈(P2) 데이터 로직. cards/notices를 실제 Supabase에서 조회한다.
- * (참고) 프로필별 카드 매칭은 아직 없어서 currentProfileId는 직접 필터링에 쓰이지 않고,
- * 인사말/빈 문구에 이름을 표시하는 용도로만 다른 곳(HomePage)에서 쓰인다.
+ * 홈(P2) 데이터 로직. cards/notices/card_impacts를 실제 Supabase에서 조회한다.
+ * relatedCards는 explain-impact가 현재 프로필에게 "해당"으로 확정한 카드만 담는다.
  */
 export function useHomeData(): UseHomeDataResult {
-  const { agentLogs } = useDemoStore();
+  const { currentProfileId, agentLogs } = useDemoStore();
   const [status, setStatus] = useState<AsyncStatus>('loading');
   const [data, setData] = useState<HomeData | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -33,7 +32,7 @@ export function useHomeData(): UseHomeDataResult {
 
     (async () => {
       try {
-        const relatedCards = await fetchRelatedNoticeCards();
+        const relatedCards = await fetchRelatedNoticeCards(currentProfileId);
         const { notices: otherNotices, totalCount: otherNoticesTotalCount } =
           await fetchOtherNotices(relatedCards.map((nc) => nc.notice.id));
         const latest = getAgentLogs()[0];
@@ -54,8 +53,9 @@ export function useHomeData(): UseHomeDataResult {
     return () => {
       cancelled = true;
     };
-    // agentLogs가 바뀌면(에이전트 실행) 홈의 "최근 실행" 요약도 다시 계산한다.
-  }, [agentLogs, reloadKey]);
+    // agentLogs가 바뀌면(에이전트 실행) 홈의 "최근 실행" 요약도 다시 계산하고,
+    // currentProfileId가 바뀌면(프로필 전환) 관련 카드도 다시 조회한다.
+  }, [currentProfileId, agentLogs, reloadKey]);
 
   return {
     status,

@@ -1,12 +1,13 @@
-// Gemini 호출: 법안 원문을 두 페르소나 기준으로 판단시키고, 관련 있으면 쉬운 카드 문구까지 받는다.
+// Gemini 호출 공통 로직: 모델 선택, 페이싱용 상수, 429 지수 백오프, JSON 강제 호출.
+// make-card(judgeAndDraftCard)와 explain-impact(judgeCardImpact, geminiImpact.ts)가 함께 쓴다.
 
 import { sleep } from './sleep.ts';
 
 export type GeminiModel = 'flash-lite' | 'flash';
 
 // Google AI Studio에서 확인한 실제 분당 요청 한도(RPM) 기준.
-// flash-lite: RPM 15 → runMakeCard의 기본 페이싱(4.2~4.5초)과 맞물려 사용.
-// flash: RPM 5 → 최소 12초 간격 강제, 시연용 소수 카드 처리 전용.
+// flash-lite: RPM 15 → 기본 페이싱(4.2~4.5초)과 맞물려 사용.
+// flash: RPM 5 → 최소 12초 간격 강제, 시연용 소수 건 처리 전용.
 const MODEL_IDS: Record<GeminiModel, string> = {
   'flash-lite': 'gemini-3.5-flash-lite',
   flash: 'gemini-3.6-flash',
@@ -14,15 +15,6 @@ const MODEL_IDS: Record<GeminiModel, string> = {
 
 function geminiUrl(model: GeminiModel): string {
   return `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_IDS[model]}:generateContent`;
-}
-
-export interface CardJudgment {
-  is_relevant: boolean;
-  reason: string;
-  easy_title?: string;
-  one_line?: string;
-  pros?: string[];
-  cons?: string[];
 }
 
 /** Gemini 호출/파싱 실패 사유를 구분해서 담는 에러. message는 agent_logs에 그대로 기록된다. */
@@ -36,7 +28,105 @@ export class GeminiApiError extends Error {
   }
 }
 
-const RESPONSE_SCHEMA = {
+// 429(할당량 초과)에만 지수 백오프로 재시도한다. 그 외 실패(네트워크/4xx/5xx)는 즉시 실패 처리.
+const RETRY_DELAYS_MS = [1000, 2000, 4000]; // 최대 3회 재시도
+
+async function fetchGeminiWithBackoff(
+  url: string,
+  body: unknown,
+): Promise<{ status: number; text: string }> {
+  for (let attempt = 0; ; attempt += 1) {
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      throw new GeminiApiError(
+        '[분석] 실패 · 응답 없음',
+        `network error: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    const text = await response.text();
+    if (response.status !== 429 || attempt >= RETRY_DELAYS_MS.length) {
+      return { status: response.status, text };
+    }
+    await sleep(RETRY_DELAYS_MS[attempt]);
+  }
+}
+
+/**
+ * responseSchema로 JSON 출력을 강제해 Gemini를 호출하고, candidate의 JSON 텍스트를 파싱해 돌려준다.
+ * 스키마별 필드 검증(필수값 확인 등)은 호출하는 쪽에서 한다.
+ */
+export async function callGeminiJson(
+  apiKey: string,
+  model: GeminiModel,
+  prompt: string,
+  responseSchema: object,
+): Promise<Record<string, unknown>> {
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema,
+      temperature: 0.3,
+    },
+  };
+
+  const { status, text } = await fetchGeminiWithBackoff(`${geminiUrl(model)}?key=${apiKey}`, body);
+
+  if (status !== 200) {
+    throw new GeminiApiError('[분석] 실패 · 응답 없음', `HTTP ${status}: ${text.slice(0, 300)}`);
+  }
+
+  let json: Record<string, unknown>;
+  try {
+    json = JSON.parse(text) as Record<string, unknown>;
+  } catch (err) {
+    throw new GeminiApiError(
+      '[분석] 실패 · JSON 파싱 실패',
+      `response JSON parse error: ${err instanceof Error ? err.message : String(err)}; body head=${text.slice(0, 200)}`,
+    );
+  }
+
+  const candidates = json.candidates as
+    | { content?: { parts?: { text?: string }[] }; finishReason?: string }[]
+    | undefined;
+  const candidateText = candidates?.[0]?.content?.parts?.[0]?.text;
+
+  if (!candidateText) {
+    throw new GeminiApiError(
+      '[분석] 실패 · 응답 없음',
+      `no candidate text; finishReason=${candidates?.[0]?.finishReason}; raw=${text.slice(0, 300)}`,
+    );
+  }
+
+  try {
+    return JSON.parse(candidateText) as Record<string, unknown>;
+  } catch (err) {
+    throw new GeminiApiError(
+      '[분석] 실패 · JSON 파싱 실패',
+      `candidate JSON parse error: ${err instanceof Error ? err.message : String(err)}; text=${candidateText.slice(0, 300)}`,
+    );
+  }
+}
+
+// ---------- make-card 전용: 법안 관련성 판단 + 카드 초안 생성 ----------
+
+export interface CardJudgment {
+  is_relevant: boolean;
+  reason: string;
+  easy_title?: string;
+  one_line?: string;
+  pros?: string[];
+  cons?: string[];
+}
+
+const CARD_JUDGMENT_SCHEMA = {
   type: 'OBJECT',
   properties: {
     is_relevant: { type: 'BOOLEAN' },
@@ -49,7 +139,7 @@ const RESPONSE_SCHEMA = {
   required: ['is_relevant', 'reason'],
 } as const;
 
-function buildPrompt(params: {
+function buildCardPrompt(params: {
   billName: string;
   mainContent: string;
   proposalReason: string | null;
@@ -95,91 +185,22 @@ ${proposalReason ? `\n[제안이유 요약]\n${proposalReason}` : ''}
 반드시 지정된 JSON 스키마로만 응답하세요.`;
 }
 
-// 429(할당량 초과)에만 지수 백오프로 재시도한다. 그 외 실패(네트워크/4xx/5xx)는 기존대로 즉시 실패 처리.
-const RETRY_DELAYS_MS = [1000, 2000, 4000]; // 최대 3회 재시도
-
-async function fetchGeminiWithBackoff(
-  url: string,
-  body: unknown,
-): Promise<{ status: number; text: string }> {
-  for (let attempt = 0; ; attempt += 1) {
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-    } catch (err) {
-      throw new GeminiApiError(
-        '[분석] 실패 · 응답 없음',
-        `network error: ${err instanceof Error ? err.message : String(err)}`,
-      );
-    }
-
-    const text = await response.text();
-    if (response.status !== 429 || attempt >= RETRY_DELAYS_MS.length) {
-      return { status: response.status, text };
-    }
-    await sleep(RETRY_DELAYS_MS[attempt]);
-  }
-}
-
 export async function judgeAndDraftCard(
   apiKey: string,
   params: { billName: string; mainContent: string; proposalReason: string | null },
   model: GeminiModel = 'flash-lite',
 ): Promise<CardJudgment> {
-  const body = {
-    contents: [{ parts: [{ text: buildPrompt(params) }] }],
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema: RESPONSE_SCHEMA,
-      temperature: 0.3,
-    },
-  };
-
-  const { status, text } = await fetchGeminiWithBackoff(`${geminiUrl(model)}?key=${apiKey}`, body);
-
-  if (status !== 200) {
-    throw new GeminiApiError('[분석] 실패 · 응답 없음', `HTTP ${status}: ${text.slice(0, 300)}`);
-  }
-
-  let json: Record<string, unknown>;
-  try {
-    json = JSON.parse(text) as Record<string, unknown>;
-  } catch (err) {
-    throw new GeminiApiError(
-      '[분석] 실패 · JSON 파싱 실패',
-      `response JSON parse error: ${err instanceof Error ? err.message : String(err)}; body head=${text.slice(0, 200)}`,
-    );
-  }
-
-  const candidates = json.candidates as
-    { content?: { parts?: { text?: string }[] }; finishReason?: string }[] | undefined;
-  const candidateText = candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!candidateText) {
-    throw new GeminiApiError(
-      '[분석] 실패 · 응답 없음',
-      `no candidate text; finishReason=${candidates?.[0]?.finishReason}; raw=${text.slice(0, 300)}`,
-    );
-  }
-
-  let parsed: CardJudgment;
-  try {
-    parsed = JSON.parse(candidateText) as CardJudgment;
-  } catch (err) {
-    throw new GeminiApiError(
-      '[분석] 실패 · JSON 파싱 실패',
-      `candidate JSON parse error: ${err instanceof Error ? err.message : String(err)}; text=${candidateText.slice(0, 300)}`,
-    );
-  }
+  const parsed = (await callGeminiJson(
+    apiKey,
+    model,
+    buildCardPrompt(params),
+    CARD_JUDGMENT_SCHEMA,
+  )) as unknown as CardJudgment;
 
   if (typeof parsed.is_relevant !== 'boolean' || typeof parsed.reason !== 'string') {
     throw new GeminiApiError(
       '[분석] 실패 · JSON 파싱 실패',
-      `missing required fields in response: ${candidateText.slice(0, 300)}`,
+      `missing required fields in response: ${JSON.stringify(parsed).slice(0, 300)}`,
     );
   }
 
@@ -190,7 +211,7 @@ export async function judgeAndDraftCard(
   if (parsed.is_relevant && (parsed.pros?.length ?? 0) < 2) {
     throw new GeminiApiError(
       '[분석] 실패 · 카드 정보 부족',
-      `pros=${parsed.pros?.length ?? 0}; text=${candidateText.slice(0, 300)}`,
+      `pros=${parsed.pros?.length ?? 0}; text=${JSON.stringify(parsed).slice(0, 300)}`,
     );
   }
 

@@ -56,10 +56,23 @@ export interface Card {
   created_at: string;
 }
 
-/** notices + cards를 조인한 화면 표시용 묶음 (DB 테이블 아님) */
+// card_impacts 테이블 (카드 × 프로필별 개인화 판단 결과)
+export interface CardImpact {
+  id: string;
+  card_id: string;
+  profile_id: string;
+  is_relevant: boolean | null;
+  impact_text: string | null;
+  calculation_basis: string | null;
+  created_at: string;
+}
+
+/** notices + cards(+ 현재 프로필의 card_impacts)를 조인한 화면 표시용 묶음 (DB 테이블 아님) */
 export interface NoticeCard {
   notice: Notice;
   card: Card;
+  /** 현재 선택된 프로필 기준 개인화 판단. 아직 explain-impact가 안 돌았으면 없을 수 있다. */
+  impact?: CardImpact | null;
 }
 
 export type OpinionStatus = 'draft' | 'draft_confirmed' | 'submitted';

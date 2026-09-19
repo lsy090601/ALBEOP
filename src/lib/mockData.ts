@@ -55,9 +55,11 @@ export function getRelativeTime(dateStr: string): string {
 }
 
 // ---------- 페르소나 ----------
+// 실제 Supabase profiles 행의 id (api/_lib/demoProfiles.ts가 만든 auth 사용자 기준).
+// card_impacts.profile_id가 profiles(id)를 참조하는 FK라, 데모 페르소나도 실제 DB 행이 있어야 한다.
 
-export const CHAEWON_ID = 'profile-chaewon';
-export const DOYOON_ID = 'profile-doyoon';
+export const CHAEWON_ID = '644dc8bd-2042-4fc7-8c1b-3d4896fbaab2';
+export const DOYOON_ID = '240a138a-5713-4eb2-a009-bc94bd7c1225';
 
 export const seedProfiles: Profile[] = [
   {

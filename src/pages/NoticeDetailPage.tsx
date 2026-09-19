@@ -64,14 +64,34 @@ export default function NoticeDetailPage() {
               </>
             )}
 
-            {noticeCard.card.relevance_reason && (
-              <div className="flex flex-col gap-2 rounded-xl bg-navy p-[18px] text-white">
-                <p className="text-[11px] font-bold">나에게 중요한 이유</p>
-                <p className="text-[14px] font-medium leading-[1.55]">
-                  {noticeCard.card.relevance_reason}
-                </p>
-              </div>
-            )}
+            {noticeCard.impact?.impact_text &&
+              (noticeCard.impact.is_relevant === false ? (
+                <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-[18px]">
+                  <p className="text-[11px] font-bold text-muted">나에게는 해당하지 않아요</p>
+                  <p className="text-[14px] font-medium leading-[1.55] text-ink">
+                    {noticeCard.impact.impact_text}
+                  </p>
+                  {noticeCard.impact.calculation_basis && (
+                    <p className="text-[11px] leading-[1.55] text-faint">
+                      판단 근거 · {noticeCard.impact.calculation_basis}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 rounded-xl bg-navy p-[18px] text-white">
+                  <p className="text-[11px] font-bold">
+                    {noticeCard.impact.is_relevant === null ? '확인이 더 필요해요' : '나에게 중요한 이유'}
+                  </p>
+                  <p className="text-[14px] font-medium leading-[1.55]">
+                    {noticeCard.impact.impact_text}
+                  </p>
+                  {noticeCard.impact.calculation_basis && (
+                    <p className="text-[11px] leading-[1.55] text-proof">
+                      판단 근거 · {noticeCard.impact.calculation_basis}
+                    </p>
+                  )}
+                </div>
+              ))}
 
             {(noticeCard.card.pros?.length || noticeCard.card.cons?.length) && (
               <>
