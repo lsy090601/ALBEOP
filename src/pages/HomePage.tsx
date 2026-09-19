@@ -1,0 +1,130 @@
+import { Link } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+import Card from '../components/Card';
+import LoadingState from '../components/LoadingState';
+import ErrorState from '../components/ErrorState';
+import EmptyState from '../components/EmptyState';
+import { Button } from '../components/Button';
+import { useHomeData } from '../hooks/useHomeData';
+import { useDemoStore } from '../hooks/useDemoStore';
+import { getDaysUntil, getProfileById } from '../lib/mockData';
+
+export default function HomePage() {
+  const { currentProfileId } = useDemoStore();
+  const profile = getProfileById(currentProfileId);
+  const { status, relatedCards, otherCards, latestRunLabel, reload } = useHomeData();
+
+  return (
+    <div className="min-h-screen bg-page">
+      <Navbar
+        mode="app"
+        active="home"
+        trailing={profile ? `${profile.display_name} 님` : undefined}
+      />
+      <div className="mx-auto flex w-[1040px] max-w-full flex-col gap-[26px] bg-white pb-[60px] pt-[42px]">
+        {!currentProfileId ? (
+          <EmptyState
+            eyebrow="시작 전이에요"
+            title="아직 내 상황이 등록되지 않았어요"
+            body="상황을 등록하면 나와 관련된 입법예고만 골라서 보여드려요."
+            actionLabel="내 상황 등록하러 가기"
+            actionTo="/start"
+          />
+        ) : (
+          <>
+            <div className="flex items-start justify-between">
+              <div className="flex flex-col gap-[7px]">
+                <p className="text-[12px] font-bold text-navy">
+                  오늘, {profile?.display_name} 님에게 닿은 변화
+                </p>
+                <h1 className="text-[32px] font-bold text-ink">
+                  {status === 'success'
+                    ? `지금 확인할 법안은 ${relatedCards?.length}건이에요`
+                    : '오늘의 법안을 확인하고 있어요'}
+                </h1>
+                <p className="text-[14px] text-muted">
+                  생활 조건과 맞닿은 변화만 골라서 보여드려요.
+                </p>
+              </div>
+              {latestRunLabel && (
+                <div className="flex w-[205px] shrink-0 flex-col gap-1.5 rounded-xl border border-border bg-surface px-[18px] py-4">
+                  <p className="text-[11px] font-bold text-navy">에이전트 활동</p>
+                  <p className="text-[13px] font-medium text-ink">{latestRunLabel} 실행</p>
+                  <Link to="/agent" className="text-[12px] text-navy underline">
+                    작업 로그 보기
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            <p className="text-[18px] font-bold text-ink">나와 관련된 입법예고</p>
+
+            {status === 'loading' && (
+              <div className="flex w-full gap-3.5">
+                {[0, 1, 2].map((i) => (
+                  <LoadingState key={i} title="새 입법예고를 읽고 있어요" />
+                ))}
+              </div>
+            )}
+
+            {status === 'error' && (
+              <ErrorState
+                eyebrow="연결 실패"
+                title="지금은 국회 데이터를 불러올 수 없어요."
+                body="오늘 07:00 기준 저장된 정보를 보여드려요."
+                actionLabel="다시 시도하기"
+                onAction={reload}
+              />
+            )}
+
+            {(status === 'success' || status === 'error') &&
+              relatedCards &&
+              relatedCards.length > 0 && (
+                <div className="flex w-full gap-3.5">
+                  {relatedCards.map((nc) => (
+                    <Card key={nc.notice.id} noticeCard={nc} userName={profile?.display_name} />
+                  ))}
+                </div>
+              )}
+
+            {status === 'success' && relatedCards && relatedCards.length === 0 && (
+              <EmptyState
+                eyebrow="관련 법안 0건"
+                title={`오늘은 ${profile?.display_name} 님과 관련된 새 입법예고가 없어요.`}
+                body="새 법안이 올라오면 바로 알려드릴게요."
+                actionLabel="다른 입법예고 보기"
+                actionTo="#"
+              />
+            )}
+
+            {(status === 'success' || status === 'error') &&
+              otherCards &&
+              otherCards.length > 0 && (
+                <>
+                  <p className="text-[16px] font-bold text-ink">관련성이 낮아 걸러진 법안</p>
+                  <div className="flex w-full flex-col rounded-[10px] border border-border">
+                    {otherCards.map((nc, i) => (
+                      <Link
+                        key={nc.notice.id}
+                        to={`/notice/${nc.notice.id}`}
+                        className={`flex items-center gap-4 px-4 py-3 ${i > 0 ? 'border-t border-border' : ''}`}
+                      >
+                        <p className="text-[12px] font-medium text-ink">{nc.card.easy_title}</p>
+                        <div className="h-px flex-1 bg-border" />
+                        <p className="shrink-0 text-[11px] text-muted">
+                          {nc.notice.committee} · D-{getDaysUntil(nc.notice.notice_end)}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                  <Button variant="secondary" size="sm">
+                    더 보기
+                  </Button>
+                </>
+              )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
