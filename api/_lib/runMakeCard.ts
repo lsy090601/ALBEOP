@@ -2,6 +2,7 @@ import { supabaseAdmin } from './supabaseAdmin.ts';
 import { GeminiApiError, judgeAndDraftCard } from './gemini.ts';
 import type { GeminiModel } from './gemini.ts';
 import { sleep } from './sleep.ts';
+import { humanizeReason } from './humanizeError.ts';
 
 // Google AI Studio 실측 RPM(flash-lite 15 / flash 5)에 맞춘 호출 간격.
 // flash-lite는 60÷15=4초 경계에 딱 붙지 않도록 여유를 두고, flash는 60÷5=12초를 그대로 강제한다.
@@ -194,14 +195,15 @@ export async function runMakeCard(options: RunMakeCardOptions = {}): Promise<Mak
     } catch (err) {
       failed += 1;
       const message = err instanceof GeminiApiError ? err.message : '[분석] 실패 · 응답 없음';
-      const reason =
+      const rawReason =
         err instanceof GeminiApiError
           ? err.reason
           : err instanceof Error
             ? err.message
             : String(err);
+      console.error(`make-card failed (${billName}):`, rawReason);
       // 재시도 없이 바로 다음 카드로 넘어간다.
-      await logAnalyzeRun(card.notice_id, `${billName} → ${message}`, reason, null);
+      await logAnalyzeRun(card.notice_id, `${billName} → ${message}`, humanizeReason(rawReason), null);
     }
   }
 

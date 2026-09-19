@@ -6,6 +6,7 @@ import type { ImpactVerdict, ProfileForPrompt } from './geminiImpact.ts';
 import { DEMO_PERSONAS, getAllDemoProfileIds } from './demoProfiles.ts';
 import type { DemoPersonaKey } from './demoProfiles.ts';
 import { sleep } from './sleep.ts';
+import { humanizeReason } from './humanizeError.ts';
 
 export interface ExplainImpactOptions {
   cardId?: string;
@@ -180,10 +181,11 @@ export async function runExplainImpact(
         verdictsForLog.push(`${label}: ${judgment.verdict}`);
       } catch (err) {
         failed += 1;
-        const reason =
+        const rawReason =
           err instanceof GeminiApiError ? err.reason : err instanceof Error ? err.message : String(err);
+        console.error(`explain-impact failed (${billName}, ${label}):`, rawReason);
         verdictsForLog.push(`${label}: 실패`);
-        await logMatchRun(`${billName} → ${label}: 판단 실패`, reason);
+        await logMatchRun(`${billName} → ${label}: 판단 실패`, humanizeReason(rawReason));
       }
     }
 

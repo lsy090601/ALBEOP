@@ -120,7 +120,17 @@ export interface AppNotification {
   created_at: string;
 }
 
-export type AgentLogStep = '수집' | '선별' | '요약' | '완료';
+// 실제 /api 함수들이 쓰는 값(collect/filter/detail/analyze/match/interview/draft/track).
+// 데모 연출(demoStore.runAgentStep)은 한글 라벨을 그대로 step에 넣으므로 string도 함께 허용한다.
+export type AgentLogStep =
+  | 'collect'
+  | 'filter'
+  | 'detail'
+  | 'analyze'
+  | 'match'
+  | 'interview'
+  | 'draft'
+  | 'track';
 
 // agent_logs 테이블
 export interface AgentLog {

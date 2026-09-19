@@ -2,6 +2,7 @@ import { supabaseAdmin } from './supabaseAdmin.ts';
 import { AssemblyApiError, fetchAllNotices } from './assembly.ts';
 import { normalizeDate } from './normalizeDate.ts';
 import type { AssemblyNoticeRow } from './assembly.ts';
+import { humanizeReason } from './humanizeError.ts';
 
 export interface FetchNoticesResult {
   fetched: number;
@@ -51,11 +52,14 @@ export async function runFetchNotices(): Promise<FetchNoticesResult> {
     rows = await fetchAllNotices(apiKey);
   } catch (err) {
     if (err instanceof AssemblyApiError) {
-      await logAgentRun(err.message, err.reason);
+      console.error('fetch-notices failed:', err.reason);
+      await logAgentRun(err.message, humanizeReason(err.reason));
       throw err;
     }
     const message = '[수집] 실패 · 응답 없음';
-    await logAgentRun(message, err instanceof Error ? err.message : String(err));
+    const rawReason = err instanceof Error ? err.message : String(err);
+    console.error('fetch-notices failed:', rawReason);
+    await logAgentRun(message, humanizeReason(rawReason));
     throw new Error(message, { cause: err });
   }
 
@@ -69,7 +73,8 @@ export async function runFetchNotices(): Promise<FetchNoticesResult> {
 
   if (error) {
     const message = '[수집] 실패 · 응답 없음';
-    await logAgentRun(message, `Supabase upsert error: ${error.message}`);
+    console.error('fetch-notices upsert failed:', error.message);
+    await logAgentRun(message, humanizeReason(`Supabase upsert error: ${error.message}`));
     throw new Error(message);
   }
 

@@ -1,6 +1,7 @@
 import { supabaseAdmin } from './supabaseAdmin.ts';
 import { GeminiApiError, type GeminiModel } from './gemini.ts';
 import { judgeNextInterviewStep, type InterviewTurn } from './geminiInterview.ts';
+import { humanizeReason } from './humanizeError.ts';
 
 export interface InterviewOpinionOptions {
   noticeId: string;
@@ -178,9 +179,10 @@ export async function runInterviewOpinion(
       interview: nextInterview,
     };
   } catch (err) {
-    const reason =
+    const rawReason =
       err instanceof GeminiApiError ? err.reason : err instanceof Error ? err.message : String(err);
-    await logInterviewRun(noticeId, `${billName} 인터뷰 질문 생성 실패`, reason);
+    console.error(`interview-opinion failed (${billName}):`, rawReason);
+    await logInterviewRun(noticeId, `${billName} 인터뷰 질문 생성 실패`, humanizeReason(rawReason));
     throw err;
   }
 }

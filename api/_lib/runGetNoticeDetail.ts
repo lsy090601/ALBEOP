@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './supabaseAdmin.ts';
 import { BillSummaryApiError, extractProposalReason, fetchBillSummary } from './billSummary.ts';
+import { humanizeReason } from './humanizeError.ts';
 
 export interface GetNoticeDetailResult {
   totalCandidates: number;
@@ -95,13 +96,14 @@ export async function runGetNoticeDetail(): Promise<GetNoticeDetailResult> {
       await logDetailRun(notice.id, `${billName} → 제안이유·주요내용 확보`, null);
     } catch (err) {
       failed += 1;
-      const reason =
+      const rawReason =
         err instanceof BillSummaryApiError
           ? err.reason
           : err instanceof Error
             ? err.message
             : String(err);
-      await logDetailRun(notice.id, `${billName} → 제안이유 조회 실패`, reason);
+      console.error(`get-notice-detail failed (${billName}):`, rawReason);
+      await logDetailRun(notice.id, `${billName} → 제안이유 조회 실패`, humanizeReason(rawReason));
     }
   }
 

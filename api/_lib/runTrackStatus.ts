@@ -5,6 +5,7 @@ import {
   fetchBillTracking,
   mapToTrackingStatus,
 } from './billTracking.ts';
+import { humanizeReason } from './humanizeError.ts';
 
 export interface TrackStatusOptions {
   /** 특정 opinion 하나만 추적하고 싶을 때(테스트용). 없으면 대상 전체를 처리한다. */
@@ -159,13 +160,14 @@ export async function runTrackStatus(
       changed += 1;
     } catch (err) {
       failed += 1;
-      const reason =
+      const rawReason =
         err instanceof BillTrackingApiError
           ? err.reason
           : err instanceof Error
             ? err.message
             : String(err);
-      await logTrackRun(opinion.notice_id, `${easyTitle} 처리단계 조회 실패`, reason);
+      console.error(`track-status failed (${notice.bill_id}):`, rawReason);
+      await logTrackRun(opinion.notice_id, `${easyTitle} 처리단계 조회 실패`, humanizeReason(rawReason));
     }
   }
 

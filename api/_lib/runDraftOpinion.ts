@@ -2,6 +2,7 @@ import { supabaseAdmin } from './supabaseAdmin.ts';
 import { GeminiApiError, type GeminiModel } from './gemini.ts';
 import { draftOpinionText } from './geminiDraft.ts';
 import type { InterviewTurn } from './geminiInterview.ts';
+import { humanizeReason } from './humanizeError.ts';
 
 export interface OpinionSummary {
   title?: string;
@@ -153,9 +154,10 @@ export async function runDraftOpinion(
 
     return { opinion_id: opinion.id, summary, draft_text: result.draft_text };
   } catch (err) {
-    const reason =
+    const rawReason =
       err instanceof GeminiApiError ? err.reason : err instanceof Error ? err.message : String(err);
-    await logDraftRun(opinion.notice_id, `${billName} 의견서 초안 생성 실패`, reason);
+    console.error(`draft-opinion failed (${billName}):`, rawReason);
+    await logDraftRun(opinion.notice_id, `${billName} 의견서 초안 생성 실패`, humanizeReason(rawReason));
     throw err;
   }
 }

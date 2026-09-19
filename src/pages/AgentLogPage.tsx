@@ -5,11 +5,28 @@ import { useAgentLog } from '../hooks/useAgentLog';
 import { useDemoStore } from '../hooks/useDemoStore';
 import { getRelativeTime } from '../lib/mockData';
 
+// 실제 /api 함수들이 쓰는 step 값(collect/filter/detail/analyze/match/interview/draft/track) → 화면 라벨.
+// 데모 연출은 한글 라벨을 그대로 step에 넣으므로 매핑에 없으면 step 값 자체를 보여준다.
+const stepLabel: Record<string, string> = {
+  collect: '수집',
+  filter: '선별',
+  detail: '상세조회',
+  analyze: '분석',
+  match: '매칭',
+  interview: '인터뷰',
+  draft: '초안 작성',
+  track: '진행 추적',
+};
+
 const stepColor: Record<string, string> = {
-  수집: 'bg-faint',
-  선별: 'bg-navy',
-  요약: 'bg-navy-soft',
-  완료: 'bg-navy',
+  collect: 'bg-faint',
+  filter: 'bg-navy-soft',
+  detail: 'bg-faint',
+  analyze: 'bg-navy',
+  match: 'bg-navy',
+  interview: 'bg-navy-soft',
+  draft: 'bg-navy-soft',
+  track: 'bg-navy',
 };
 
 export default function AgentLogPage() {
@@ -45,14 +62,21 @@ export default function AgentLogPage() {
 
         {!isEmpty && (
           <div className="flex flex-col gap-3">
-            {entries.map(({ log, noticeCard }) => (
-              <div key={log.id} className="flex gap-3 rounded-xl border border-border p-4">
+            {entries.map(({ log, noticeName, isMock }) => (
+              <div
+                key={log.id}
+                className={`flex gap-3 rounded-xl border p-4 ${
+                  isMock ? 'border-border bg-surface' : 'border-border'
+                }`}
+              >
                 <span
                   className={`mt-1 size-2 shrink-0 rounded-full ${stepColor[log.step ?? ''] ?? 'bg-faint'}`}
                 />
                 <div className="flex flex-1 flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-navy">{log.step}</span>
+                    <span className="text-[11px] font-bold text-navy">
+                      {stepLabel[log.step ?? ''] ?? log.step}
+                    </span>
                     <span className="text-[11px] text-faint">
                       {getRelativeTime(log.created_at)}
                     </span>
@@ -65,14 +89,17 @@ export default function AgentLogPage() {
                         {log.included ? '포함' : '제외'}
                       </span>
                     )}
+                    {isMock && (
+                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-faint">
+                        연출
+                      </span>
+                    )}
                   </div>
                   <p className="text-[13px] leading-[1.55] text-ink">{log.message}</p>
                   {log.reason && (
                     <p className="text-[12px] leading-[1.5] text-muted">근거 · {log.reason}</p>
                   )}
-                  {noticeCard && (
-                    <p className="text-[11px] text-navy">관련 법안: {noticeCard.card.easy_title}</p>
-                  )}
+                  {noticeName && <p className="text-[11px] text-navy">관련 법안: {noticeName}</p>}
                 </div>
               </div>
             ))}
