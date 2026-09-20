@@ -34,18 +34,18 @@ export default function AgentLogPage() {
   const { runAgentStep } = useDemoStore();
 
   return (
-    <div className="min-h-screen bg-page">
+    <div className="min-h-screen bg-white">
       <Navbar mode="app" active="agent" />
-      <div className="mx-auto flex w-[960px] max-w-full flex-col gap-[22px] bg-white pb-14 pt-11">
-        <div className="flex items-start justify-between">
-          <div className="flex flex-col gap-1.5">
-            <p className="text-[12px] font-bold text-navy">투명하게 공개해요</p>
-            <h1 className="text-[30px] font-bold text-ink">에이전트 작업 로그</h1>
-            <p className="text-[14px] text-muted">
+      <div className="mx-auto flex w-full max-w-default flex-col gap-7 px-10 pb-24 pt-20">
+        <div className="flex items-start justify-between gap-10">
+          <div className="flex flex-col gap-2.5">
+            <p className="text-[13px] font-bold text-navy">투명하게 공개해요</p>
+            <h1 className="text-[34px] font-bold leading-[1.3] text-ink">에이전트 작업 로그</h1>
+            <p className="text-[14px] leading-[1.7] text-muted">
               무엇을 왜 골랐는지, 무엇을 왜 제외했는지를 그대로 보여드려요.
             </p>
           </div>
-          <Button variant="primary" size="sm" onClick={() => runAgentStep()}>
+          <Button variant="primary" size="sm" onClick={() => runAgentStep()} className="shrink-0">
             에이전트 실행
           </Button>
         </div>
@@ -65,41 +65,43 @@ export default function AgentLogPage() {
             {entries.map(({ log, noticeName, isMock }) => (
               <div
                 key={log.id}
-                className={`flex gap-3 rounded-xl border p-4 ${
-                  isMock ? 'border-border bg-surface' : 'border-border'
+                className={`flex gap-3.5 rounded-card border border-border p-5 ${
+                  isMock ? 'bg-surface' : 'bg-white shadow-card'
                 }`}
               >
                 <span
-                  className={`mt-1 size-2 shrink-0 rounded-full ${stepColor[log.step ?? ''] ?? 'bg-faint'}`}
+                  className={`mt-1.5 size-2.5 shrink-0 rounded-full ${stepColor[log.step ?? ''] ?? 'bg-faint'}`}
                 />
-                <div className="flex flex-1 flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-navy">
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-[12px] font-bold text-navy">
                       {stepLabel[log.step ?? ''] ?? log.step}
                     </span>
-                    <span className="text-[11px] text-faint">
+                    <span className="text-[12px] text-faint">
                       {getRelativeTime(log.created_at)}
                     </span>
                     {log.included !== null && (
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          log.included ? 'bg-navy text-white' : 'bg-surface text-muted'
+                        className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                          log.included ? 'bg-navy text-white' : 'bg-surface-strong text-muted'
                         }`}
                       >
                         {log.included ? '포함' : '제외'}
                       </span>
                     )}
                     {isMock && (
-                      <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-faint">
+                      <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-bold text-faint">
                         연출
                       </span>
                     )}
                   </div>
-                  <p className="text-[13px] leading-[1.55] text-ink">{log.message}</p>
+                  <p className="text-[14px] leading-[1.7] text-ink">{log.message}</p>
                   {log.reason && (
-                    <p className="text-[12px] leading-[1.5] text-muted">근거 · {log.reason}</p>
+                    <p className="text-[13px] leading-[1.7] text-muted">근거 · {log.reason}</p>
                   )}
-                  {noticeName && <p className="text-[11px] text-navy">관련 법안: {noticeName}</p>}
+                  {noticeName && (
+                    <p className="text-[12px] font-medium text-navy">관련 법안: {noticeName}</p>
+                  )}
                 </div>
               </div>
             ))}

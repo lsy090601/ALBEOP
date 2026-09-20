@@ -24,9 +24,9 @@ export default function HomePage() {
   } = useHomeData();
 
   return (
-    <div className="min-h-screen bg-page">
+    <div className="min-h-screen bg-white">
       <Navbar mode="app" active="home" trailing={displayName ? `${displayName} 님` : undefined} />
-      <div className="mx-auto flex w-[1040px] max-w-full flex-col gap-[26px] bg-white pb-[60px] pt-[42px]">
+      <div className="mx-auto flex w-full max-w-wide flex-col gap-7 px-10 pb-24 pt-20">
         {!currentProfileId ? (
           <EmptyState
             eyebrow="시작 전이에요"
@@ -37,35 +37,35 @@ export default function HomePage() {
           />
         ) : (
           <>
-            <div className="flex items-start justify-between">
-              <div className="flex flex-col gap-[7px]">
-                <p className="text-[12px] font-bold text-navy">
+            <div className="flex items-start justify-between gap-10">
+              <div className="flex flex-col gap-2.5">
+                <p className="text-[13px] font-bold text-navy">
                   오늘, {displayName} 님에게 닿은 변화
                 </p>
-                <h1 className="text-[32px] font-bold text-ink">
+                <h1 className="text-[34px] font-bold leading-[1.3] text-ink">
                   {status === 'success'
                     ? `지금 확인할 법안은 ${relatedCards?.length}건이에요`
                     : '오늘의 법안을 확인하고 있어요'}
                 </h1>
-                <p className="text-[14px] text-muted">
+                <p className="text-[14px] leading-[1.7] text-muted">
                   생활 조건과 맞닿은 변화만 골라서 보여드려요.
                 </p>
               </div>
               {latestRunLabel && (
-                <div className="flex w-[205px] shrink-0 flex-col gap-1.5 rounded-xl border border-border bg-surface px-[18px] py-4">
-                  <p className="text-[11px] font-bold text-navy">에이전트 활동</p>
-                  <p className="text-[13px] font-medium text-ink">{latestRunLabel} 실행</p>
-                  <Link to="/agent" className="text-[12px] text-navy underline">
+                <div className="flex w-[240px] shrink-0 flex-col gap-2 rounded-box bg-surface px-5 py-4">
+                  <p className="text-[12px] font-bold text-navy">에이전트 활동</p>
+                  <p className="text-[13px] leading-[1.6] text-ink">{latestRunLabel} 실행</p>
+                  <Link to="/agent" className="text-[12px] font-medium text-navy underline">
                     작업 로그 보기
                   </Link>
                 </div>
               )}
             </div>
 
-            <p className="text-[18px] font-bold text-ink">나와 관련된 입법예고</p>
+            <p className="mt-2 text-[19px] font-bold text-ink">나와 관련된 입법예고</p>
 
             {status === 'loading' && (
-              <div className="flex w-full gap-3.5">
+              <div className="flex w-full gap-5">
                 {[0, 1, 2].map((i) => (
                   <LoadingState key={i} title="새 입법예고를 읽고 있어요" />
                 ))}
@@ -85,7 +85,7 @@ export default function HomePage() {
             {(status === 'success' || status === 'error') &&
               relatedCards &&
               relatedCards.length > 0 && (
-                <div className="flex w-full gap-3.5">
+                <div className="flex w-full items-stretch gap-5">
                   {relatedCards.map((nc) => (
                     <Card key={nc.notice.id} noticeCard={nc} userName={displayName ?? undefined} />
                   ))}
@@ -106,22 +106,24 @@ export default function HomePage() {
               otherNotices &&
               otherNotices.length > 0 && (
                 <>
-                  <div className="flex items-center gap-2">
-                    <p className="text-[16px] font-bold text-ink">관련성이 낮아 걸러진 법안</p>
-                    <p className="text-[12px] text-faint">전체 {otherNoticesTotalCount}건</p>
+                  <div className="mt-4 flex items-baseline gap-2.5">
+                    <p className="text-[19px] font-bold text-ink">관련성이 낮아 걸러진 법안</p>
+                    <p className="text-[13px] text-faint">{otherNoticesTotalCount}건</p>
                   </div>
-                  <div className="flex w-full flex-col rounded-[10px] border border-border">
+                  <div className="flex w-full flex-col rounded-card border border-border">
                     {otherNotices.map((notice, i) => (
                       <Link
                         key={notice.id}
                         to={`/notice/${notice.id}`}
-                        className={`flex items-center gap-4 px-4 py-3 ${i > 0 ? 'border-t border-border' : ''}`}
+                        className={`flex items-center gap-4 px-6 py-4 transition-colors hover:bg-surface ${
+                          i > 0 ? 'border-t border-border' : ''
+                        }`}
                       >
-                        <p className="text-[12px] font-medium text-ink">
+                        <p className="text-[14px] font-medium text-ink">
                           {(notice.raw_data?.BILL_NAME as string | undefined) ?? notice.bill_id}
                         </p>
-                        <div className="h-px flex-1 bg-border" />
-                        <p className="shrink-0 text-[11px] text-muted">
+                        <div className="h-px flex-1" />
+                        <p className="shrink-0 text-[13px] text-muted">
                           {notice.committee} · {formatDDay(getDaysUntil(notice.notice_end))}
                         </p>
                       </Link>
@@ -134,6 +136,7 @@ export default function HomePage() {
                         size="sm"
                         onClick={loadMoreOtherNotices}
                         disabled={loadingMoreOtherNotices}
+                        className="w-fit"
                       >
                         {loadingMoreOtherNotices
                           ? '불러오는 중...'
