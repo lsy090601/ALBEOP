@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getAgentLogs } from '../lib/demoStore';
-import { fetchOtherNotices, fetchRelatedNoticeCards } from '../lib/noticeQueries';
+import { fetchOtherNotices, fetchRelatedNoticeCards, OTHER_NOTICES_PAGE_SIZE } from '../lib/noticeQueries';
 import type { Notice, NoticeCard } from '../types/database';
 import { useDemoStore } from './useDemoStore';
 import type { AsyncStatus } from './asyncStatus';
@@ -15,6 +15,8 @@ interface HomeData {
 interface UseHomeDataResult extends Partial<HomeData> {
   status: AsyncStatus;
   reload: () => void;
+  loadMoreOtherNotices: () => void;
+  loadingMoreOtherNotices: boolean;
 }
 
 /**
@@ -26,6 +28,7 @@ export function useHomeData(): UseHomeDataResult {
   const [status, setStatus] = useState<AsyncStatus>('loading');
   const [data, setData] = useState<HomeData | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +60,32 @@ export function useHomeData(): UseHomeDataResult {
     // currentProfileId가 바뀌면(프로필 전환) 관련 카드도 다시 조회한다.
   }, [currentProfileId, agentLogs, reloadKey]);
 
+  async function loadMoreOtherNotices() {
+    if (!data || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const excludeIds = data.relatedCards.map((nc) => nc.notice.id);
+      const { notices: more, totalCount } = await fetchOtherNotices(
+        excludeIds,
+        data.otherNotices.length,
+        OTHER_NOTICES_PAGE_SIZE,
+      );
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              otherNotices: [...prev.otherNotices, ...more],
+              otherNoticesTotalCount: totalCount,
+            }
+          : prev,
+      );
+    } catch {
+      // 더 보기 실패는 기존 목록을 그대로 유지 — 페이지 전체를 에러로 만들지 않는다.
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
   return {
     status,
     ...data,
@@ -64,5 +93,7 @@ export function useHomeData(): UseHomeDataResult {
       setStatus('loading');
       setReloadKey((k) => k + 1);
     },
+    loadMoreOtherNotices,
+    loadingMoreOtherNotices: loadingMore,
   };
 }

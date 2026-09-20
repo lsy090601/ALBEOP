@@ -12,8 +12,16 @@ import { describeProfileName, formatDDay, getDaysUntil } from '../lib/mockData';
 export default function HomePage() {
   const { currentProfileId } = useDemoStore();
   const displayName = describeProfileName(currentProfileId);
-  const { status, relatedCards, otherNotices, otherNoticesTotalCount, latestRunLabel, reload } =
-    useHomeData();
+  const {
+    status,
+    relatedCards,
+    otherNotices,
+    otherNoticesTotalCount,
+    latestRunLabel,
+    reload,
+    loadMoreOtherNotices,
+    loadingMoreOtherNotices,
+  } = useHomeData();
 
   return (
     <div className="min-h-screen bg-page">
@@ -121,8 +129,15 @@ export default function HomePage() {
                   </div>
                   {otherNoticesTotalCount !== undefined &&
                     otherNoticesTotalCount > otherNotices.length && (
-                      <Button variant="secondary" size="sm">
-                        {otherNoticesTotalCount - otherNotices.length}건 더 보기
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={loadMoreOtherNotices}
+                        disabled={loadingMoreOtherNotices}
+                      >
+                        {loadingMoreOtherNotices
+                          ? '불러오는 중...'
+                          : `${otherNoticesTotalCount - otherNotices.length}건 더 보기`}
                       </Button>
                     )}
                 </>

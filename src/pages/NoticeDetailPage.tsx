@@ -5,11 +5,13 @@ import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import NoticeBanner from '../components/NoticeBanner';
 import { useNoticeDetail } from '../hooks/useNoticeDetail';
-import { formatDDay, getDaysUntil } from '../lib/mockData';
+import { useDemoStore } from '../hooks/useDemoStore';
+import { describeProfileName, formatDDay, getDaysUntil } from '../lib/mockData';
 
 export default function NoticeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { noticeCard, status } = useNoticeDetail(id);
+  const { currentProfileId } = useDemoStore();
   const navigate = useNavigate();
 
   return (
@@ -28,7 +30,44 @@ export default function NoticeDetailPage() {
           />
         )}
 
-        {status === 'success' && noticeCard && (
+        {status === 'success' && noticeCard && !noticeCard.card && (
+          <div className="flex flex-col gap-[22px]">
+            <p className="text-[12px] font-bold text-navy">
+              {noticeCard.notice.committee ?? '소관위원회 미정'} ·{' '}
+              {formatDDay(getDaysUntil(noticeCard.notice.notice_end))}
+            </p>
+            <h1 className="text-[26px] font-bold leading-[1.55] text-ink">
+              {(noticeCard.notice.raw_data?.BILL_NAME as string | undefined) ?? '법률안명 미확인'}
+            </h1>
+
+            <div className="rounded-[10px] bg-surface px-4 py-[14px] text-[13px] leading-[1.55] text-navy">
+              이 법안은 아직 {describeProfileName(currentProfileId) ?? '회원'} 님 기준으로 개인화
+              분석을 하지 않았어요.
+            </div>
+
+            <div className="flex flex-col gap-1.5 rounded-[10px] border border-border px-4 py-[14px]">
+              <p className="text-[11px] font-bold text-navy">제안이유</p>
+              <p className="text-[13px] leading-[1.55] text-ink">
+                {noticeCard.notice.proposal_reason ?? '아직 원문을 확인하지 못했어요.'}
+              </p>
+            </div>
+
+            {noticeCard.notice.source_url && (
+              <a
+                href={noticeCard.notice.source_url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex w-fit items-center justify-center rounded-lg bg-navy px-[18px] py-3 text-[13px] font-bold text-white"
+              >
+                원문 보기
+              </a>
+            )}
+
+            <NoticeBanner />
+          </div>
+        )}
+
+        {status === 'success' && noticeCard && noticeCard.card && (
           <div className="flex flex-col gap-[22px]">
             <p className="text-[12px] font-bold text-navy">
               {noticeCard.card.category} · {formatDDay(getDaysUntil(noticeCard.notice.notice_end))}

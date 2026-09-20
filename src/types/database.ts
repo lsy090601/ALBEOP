@@ -75,6 +75,14 @@ export interface NoticeCard {
   impact?: CardImpact | null;
 }
 
+/** P3 상세 화면 전용 — 아직 카드가 없는 법안(선별만 되고 explain-impact 전인 대다수)도
+ * 열 수 있어야 해서 card를 선택적으로 허용한다. NoticeCard와 달리 card가 null일 수 있다. */
+export interface NoticeDetail {
+  notice: Notice;
+  card: Card | null;
+  impact: CardImpact | null;
+}
+
 export type OpinionStatus = 'draft' | 'draft_confirmed' | 'submitted';
 
 export interface OpinionInterviewTurn {
