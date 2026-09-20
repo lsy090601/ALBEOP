@@ -17,12 +17,12 @@ export default function ErrorState({
   onAction,
 }: ErrorStateProps) {
   return (
-    <div className="flex w-full flex-col gap-3.5 rounded-xl border-2 border-navy bg-white px-[22px] py-6">
-      <p className="text-[10px] font-bold text-navy">{eyebrow}</p>
-      <p className="text-[16px] font-bold text-ink">{title}</p>
-      <p className="max-w-[520px] text-[12px] leading-[1.5] text-muted">{body}</p>
+    <div className="flex w-full flex-col gap-3 rounded-card border-2 border-navy bg-white p-6">
+      <p className="text-[12px] font-bold text-navy">{eyebrow}</p>
+      <p className="text-[17px] font-bold text-ink">{title}</p>
+      <p className="max-w-[560px] text-[13px] leading-[1.6] text-muted">{body}</p>
       {actionLabel && (
-        <Button variant="primary" size="sm" onClick={onAction} className="w-fit">
+        <Button variant="primary" size="sm" onClick={onAction} className="mt-1 w-fit">
           {actionLabel}
         </Button>
       )}

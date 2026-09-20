@@ -6,14 +6,14 @@ interface NoticeBannerProps {
 export default function NoticeBanner({ variant = 'default' }: NoticeBannerProps) {
   if (variant === 'compact') {
     return (
-      <p className="text-[11px] leading-[1.6] text-muted">
+      <p className="text-[12px] leading-[1.7] text-faint">
         아직 확정된 법이 아니에요 · 알법이 제공하는 내용은 법률 자문이 아니에요.
       </p>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1 rounded-lg bg-surface px-4 py-3 text-[11px] leading-[1.6] text-muted">
+    <div className="flex flex-col gap-1.5 rounded-box bg-surface px-5 py-4 text-[12px] leading-[1.7] text-muted">
       <p>
         이 내용은 입법예고 단계의 법안으로, 아직 확정된 법이 아니에요. 국회 심의 과정에서 바뀔 수
         있어요.

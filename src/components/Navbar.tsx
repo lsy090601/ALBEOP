@@ -25,19 +25,43 @@ interface LogoOnlyNavProps {
 type NavbarProps = AppNavProps | DetailNavProps | MinimalNavProps | LogoOnlyNavProps;
 
 const navLinks: { to: string; label: string; active: NavActive }[] = [
-  { to: '/', label: '홈', active: 'home' },
+  { to: '/', label: '오늘', active: 'home' },
   { to: '/my', label: '내 목소리', active: 'voice' },
-  { to: '/notifications', label: '알림함', active: 'notifications' },
+  { to: '/notifications', label: '알림', active: 'notifications' },
   { to: '/agent', label: '에이전트', active: 'agent' },
   { to: '/settings', label: '설정', active: 'settings' },
 ];
+
+const barClass =
+  'sticky top-0 z-40 flex h-[72px] w-full items-center border-b border-border bg-white';
+const innerClass = 'mx-auto flex w-full max-w-[1240px] items-center justify-between px-10';
+
+/** 원형 심볼 + 워드마크 로고 */
+function LogoMark() {
+  return (
+    <Link to="/" className="flex flex-col items-center gap-0.5" aria-label="알법 홈">
+      <span className="flex size-6 items-center justify-center rounded-[50%_50%_50%_50%/60%_60%_40%_40%] border-[2.5px] border-navy" />
+      <span className="text-[10px] font-bold leading-none text-navy">알법</span>
+    </Link>
+  );
+}
+
+function BackLink() {
+  return (
+    <Link to="/" className="text-[26px] leading-none text-ink" aria-label="뒤로 가기">
+      ‹
+    </Link>
+  );
+}
 
 function NavLink({ to, label, isActive }: { to: string; label: string; isActive: boolean }) {
   return (
     <Link
       to={to}
       className={
-        isActive ? 'text-[13px] font-bold text-navy' : 'text-[13px] font-medium text-muted'
+        isActive
+          ? 'text-[14px] font-bold text-navy'
+          : 'text-[14px] font-medium text-faint transition-colors hover:text-muted'
       }
     >
       {label}
@@ -45,47 +69,62 @@ function NavLink({ to, label, isActive }: { to: string; label: string; isActive:
   );
 }
 
-export default function Navbar(props: NavbarProps) {
+function NavLinks({ active, trailing }: { active?: NavActive; trailing?: string }) {
   const { unreadCount } = useNotifications();
 
+  return (
+    <nav className="flex items-center gap-11">
+      {navLinks.map((link) => (
+        <span key={link.active} className="relative">
+          <NavLink to={link.to} label={link.label} isActive={active === link.active} />
+          {link.active === 'notifications' && unreadCount > 0 && (
+            <span className="absolute -right-3 -top-1.5 flex size-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-white">
+              {unreadCount}
+            </span>
+          )}
+        </span>
+      ))}
+      {trailing && <span className="text-[14px] font-medium text-faint">{trailing}</span>}
+    </nav>
+  );
+}
+
+export default function Navbar(props: NavbarProps) {
   if (props.mode === 'detail') {
     return (
-      <header className="flex h-[72px] w-full items-center justify-center gap-7 border border-border bg-white">
-        <Link to="/" className="text-[20px] font-bold text-navy">
-          알법
-        </Link>
-        <Link to="/" className="text-[13px] font-medium text-muted">
-          홈으로 돌아가기
-        </Link>
-        <Link to="/my" className="text-[13px] font-medium text-muted">
-          내 목소리
-        </Link>
+      <header className={barClass}>
+        <div className={innerClass}>
+          <BackLink />
+          <NavLinks />
+        </div>
       </header>
     );
   }
 
   if (props.mode === 'minimal') {
     return (
-      <header className="flex h-[72px] w-full items-center gap-[18px] border border-border bg-white px-14">
-        <Link to="/" className="text-[20px] font-bold text-navy">
-          알법
-        </Link>
-        {props.title && (
-          <>
-            <span className="text-muted">·</span>
-            <span className="text-[13px] font-medium text-ink">{props.title}</span>
-          </>
-        )}
+      <header className={barClass}>
+        <div className="flex w-full items-center gap-4 px-10">
+          <Link to="/" className="text-[19px] font-bold text-navy">
+            알법
+          </Link>
+          {props.title && (
+            <>
+              <span className="text-faint">·</span>
+              <span className="text-[14px] font-medium text-ink">{props.title}</span>
+            </>
+          )}
+        </div>
       </header>
     );
   }
 
   if (props.mode === 'logo-only') {
     return (
-      <header className="flex h-[72px] w-full items-center justify-center border border-border bg-white">
-        <Link to="/" className="text-[20px] font-bold text-navy">
-          알법
-        </Link>
+      <header className={barClass}>
+        <div className="mx-auto flex items-center">
+          <LogoMark />
+        </div>
       </header>
     );
   }
@@ -93,21 +132,11 @@ export default function Navbar(props: NavbarProps) {
   const { active, trailing } = props;
 
   return (
-    <header className="flex h-[72px] w-full items-center justify-center gap-7 border border-border bg-white">
-      <Link to="/" className="text-[20px] font-bold text-navy">
-        알법
-      </Link>
-      {navLinks.map((link) => (
-        <span key={link.active} className="relative">
-          <NavLink to={link.to} label={link.label} isActive={active === link.active} />
-          {link.active === 'notifications' && unreadCount > 0 && (
-            <span className="absolute -right-2.5 -top-1.5 flex size-4 items-center justify-center rounded-full bg-navy text-[9px] font-bold text-white">
-              {unreadCount}
-            </span>
-          )}
-        </span>
-      ))}
-      {trailing && <span className="text-[12px] font-medium text-muted">{trailing}</span>}
+    <header className={barClass}>
+      <div className={innerClass}>
+        <LogoMark />
+        <NavLinks active={active} trailing={trailing} />
+      </div>
     </header>
   );
 }

@@ -19,11 +19,11 @@ export default function DemoPanel() {
   const currentName = describeProfileName(store.currentProfileId);
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[260px] rounded-xl border border-navy bg-white shadow-lg">
+    <div className="fixed bottom-5 right-5 z-50 w-[268px] overflow-hidden rounded-card border border-navy bg-white shadow-hero">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between rounded-xl bg-navy px-4 py-2.5 text-left text-[12px] font-bold text-white"
+        className="flex w-full items-center justify-between bg-navy px-4 py-3 text-left text-[12px] font-bold text-white"
       >
         <span>데모 패널</span>
         <span>{open ? '숨기기' : '펼치기'}</span>
@@ -38,7 +38,7 @@ export default function DemoPanel() {
           <button
             type="button"
             onClick={() => store.switchProfile(otherId)}
-            className="rounded-md border border-border px-3 py-2 text-left font-medium text-ink hover:bg-surface"
+            className="rounded-btn border border-line px-3.5 py-2.5 text-left font-medium text-ink transition-colors hover:bg-surface"
           >
             프로필 전환 ({currentName ?? '?'} ↔ {otherProfile?.display_name ?? '?'})
           </button>
@@ -46,7 +46,7 @@ export default function DemoPanel() {
           <button
             type="button"
             onClick={() => store.runAgentStep()}
-            className="rounded-md border border-border px-3 py-2 text-left font-medium text-ink hover:bg-surface"
+            className="rounded-btn border border-line px-3.5 py-2.5 text-left font-medium text-ink transition-colors hover:bg-surface"
           >
             에이전트 실행
           </button>
@@ -55,7 +55,7 @@ export default function DemoPanel() {
             type="button"
             onClick={() => store.advanceDay()}
             disabled={!store.currentProfileId}
-            className="rounded-md border border-border px-3 py-2 text-left font-medium text-ink hover:bg-surface disabled:opacity-40"
+            className="rounded-btn border border-line px-3.5 py-2.5 text-left font-medium text-ink transition-colors hover:bg-surface disabled:opacity-40"
           >
             시간경과 (D-1)
           </button>
@@ -64,7 +64,7 @@ export default function DemoPanel() {
             type="button"
             onClick={() => store.advanceCommittee()}
             disabled={!store.currentProfileId}
-            className="rounded-md border border-border px-3 py-2 text-left font-medium text-ink hover:bg-surface disabled:opacity-40"
+            className="rounded-btn border border-line px-3.5 py-2.5 text-left font-medium text-ink transition-colors hover:bg-surface disabled:opacity-40"
           >
             시간경과 (위원회 심사)
           </button>
@@ -72,7 +72,7 @@ export default function DemoPanel() {
           <button
             type="button"
             onClick={() => store.toggleCacheMode()}
-            className="rounded-md border border-border px-3 py-2 text-left font-medium text-ink hover:bg-surface"
+            className="rounded-btn border border-line px-3.5 py-2.5 text-left font-medium text-ink transition-colors hover:bg-surface"
           >
             캐시 모드: {store.cacheMode ? 'ON' : 'OFF'}
           </button>
@@ -80,7 +80,7 @@ export default function DemoPanel() {
           <button
             type="button"
             onClick={() => store.resetDemo()}
-            className="rounded-md border border-navy px-3 py-2 text-left font-bold text-navy hover:bg-surface"
+            className="rounded-btn border border-navy px-3.5 py-2.5 text-left font-bold text-navy transition-colors hover:bg-surface"
           >
             초기화
           </button>

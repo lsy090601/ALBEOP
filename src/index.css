@@ -1,23 +1,52 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
 @import 'tailwindcss';
 
 @theme {
+  /* 색상 */
   --color-navy: #0f1f3d;
   --color-navy-soft: #33476b;
   --color-navy-tint: rgba(255, 255, 255, 0.08);
+  --color-accent: #3d4ff0;
   --color-ink: #161c27;
   --color-muted: #667085;
   --color-faint: #97a0b1;
   --color-border: #e2e6ed;
   --color-surface: #f3f5f8;
+  --color-surface-strong: #e9edf4;
   --color-page: #f8f9fb;
   --color-line: #d9dee6;
   --color-proof: #d1d9e5;
-  --font-sans: 'Noto Sans KR', system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  /* 타이포 */
+  --font-sans:
+    'Pretendard Variable', Pretendard, 'Noto Sans KR', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --text-eyebrow: 12px;
+  --text-display: 34px;
+  --text-title: 22px;
+  --text-section: 17px;
+  --text-body: 14px;
+  --text-caption: 12px;
+
+  /* 모서리 */
+  --radius-btn: 8px;
+  --radius-box: 10px;
+  --radius-card: 14px;
+  --radius-hero: 24px;
+
+  /* 그림자 */
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-hero: 0 20px 44px rgba(15, 31, 61, 0.1);
+
+  /* 레이아웃 폭 */
+  --container-narrow: 720px;
+  --container-default: 960px;
+  --container-wide: 1020px;
 }
 
 body {
   margin: 0;
-  background: var(--color-page);
+  background: #ffffff;
   color: var(--color-ink);
   font-family: var(--font-sans);
+  letter-spacing: -0.015em;
 }

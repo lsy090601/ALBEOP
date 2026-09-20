@@ -12,15 +12,15 @@ export default function StatusStepper({ steps, currentIndex }: StatusStepperProp
         const isReached = isDone || isCurrent;
 
         return (
-          <div key={step} className="flex flex-1 flex-col items-center gap-1.5 last:flex-none">
+          <div key={step} className="flex flex-1 flex-col items-center gap-2 last:flex-none">
             <span
-              className={`rounded-full ${isReached ? 'bg-navy' : 'bg-faint'} ${
-                isCurrent ? 'size-3' : 'size-2'
+              className={`rounded-full ${isReached ? 'bg-navy' : 'bg-proof'} ${
+                isCurrent ? 'size-3.5' : 'size-2.5'
               }`}
             />
             <span
-              className={`whitespace-nowrap text-[10px] ${isReached ? 'text-navy' : 'text-faint'} ${
-                isCurrent ? 'font-bold' : 'font-normal'
+              className={`whitespace-nowrap text-[12px] ${isReached ? 'text-navy' : 'text-faint'} ${
+                isCurrent ? 'font-bold' : 'font-medium'
               }`}
             >
               {step}

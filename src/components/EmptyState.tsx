@@ -20,12 +20,18 @@ export default function EmptyState({
   steps,
 }: EmptyStateProps) {
   return (
-    <div className="flex w-full flex-col items-center gap-3.5 rounded-2xl border border-border bg-white px-20 py-[70px]">
-      <p className="text-[11px] font-bold text-navy">{eyebrow}</p>
+    <div className="flex w-full flex-col items-center gap-4 rounded-hero border border-border bg-white px-20 py-[90px]">
+      <p className="text-[12px] font-bold text-navy">{eyebrow}</p>
       <p className="max-w-[760px] text-center text-[22px] font-bold text-ink">{title}</p>
-      <p className="max-w-[700px] text-center text-[13px] leading-[1.6] text-muted">{body}</p>
-      {steps && <Stepper steps={steps} variant="compact" />}
-      <ButtonLink to={actionTo} variant="primary" size="md">
+      <p className="max-w-[700px] whitespace-pre-line text-center text-[14px] leading-[1.7] text-muted">
+        {body}
+      </p>
+      {steps && (
+        <div className="mt-2">
+          <Stepper steps={steps} variant="compact" />
+        </div>
+      )}
+      <ButtonLink to={actionTo} variant="primary" size="md" className="mt-3">
         {actionLabel}
       </ButtonLink>
     </div>
