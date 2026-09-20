@@ -176,7 +176,12 @@ export default function OpinionPage() {
             <NoticeBanner variant="compact" />
 
             <div className="flex flex-wrap gap-2.5">
-              <Button variant="secondary" size="md" onClick={handleToggleEdit} disabled={!draftText}>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={handleToggleEdit}
+                disabled={!draftText}
+              >
                 {isEditingDraft ? '수정 저장하기' : '직접 수정하기'}
               </Button>
               <Button

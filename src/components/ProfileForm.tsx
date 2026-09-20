@@ -109,11 +109,14 @@ export default function ProfileForm({ initialProfile, onSaved }: ProfileFormProp
       if (isEditMode && initialProfile) {
         // 수정 모드(P9): 데모 페르소나는 브라우저에 실제 로그인 세션이 없어(RLS가 막음)
         // 서비스 롤을 쓰는 /api/profile로 대신 저장한다.
-        const res = await fetch(`/api/profile?profile_id=${encodeURIComponent(initialProfile.id)}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(fields),
-        });
+        const res = await fetch(
+          `/api/profile?profile_id=${encodeURIComponent(initialProfile.id)}`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(fields),
+          },
+        );
         const json = (await res.json()) as { ok: boolean; error?: string };
         if (!res.ok || !json.ok) throw new Error(json.error ?? '저장에 실패했어요.');
         onSaved?.();
@@ -153,9 +156,7 @@ export default function ProfileForm({ initialProfile, onSaved }: ProfileFormProp
       {!isEditMode && (
         <div className="flex flex-col gap-2.5 pb-2">
           <p className="text-[13px] font-bold text-navy">맞춤 설정 · 약 2분</p>
-          <h1 className="text-[28px] font-bold leading-[1.35] text-ink">
-            생활 조건을 알려주세요
-          </h1>
+          <h1 className="text-[28px] font-bold leading-[1.35] text-ink">생활 조건을 알려주세요</h1>
           <p className="text-[14px] leading-[1.7] text-muted">
             법안과의 관련성을 판단하고 예상 영향을 계산하는 데만 사용합니다. 언제든 설정에서 바꿀 수
             있어요.

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
 import ProfileForm from '../components/ProfileForm';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
@@ -50,9 +49,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <Navbar mode="app" active="settings" />
-      <div className="mx-auto flex w-full max-w-narrow flex-col gap-5 px-10 pb-24 pt-20">
+    <>
+      <div className="mx-auto flex w-full max-w-wide flex-col gap-5 px-10 pb-24 pt-20">
         <p className="text-[13px] font-bold text-navy">설정</p>
         <h1 className="text-[34px] font-bold leading-[1.3] text-ink">내 정보와 알림을 관리해요</h1>
         <p className="mb-2 text-[14px] leading-[1.7] text-muted">
@@ -183,6 +181,6 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

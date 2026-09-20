@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useNotifications } from '../hooks/useNotifications';
+import { useDemoStore } from '../hooks/useDemoStore';
+import { describeProfileName } from '../lib/mockData';
 
 type NavActive = 'home' | 'voice' | 'notifications' | 'agent' | 'settings';
 
 interface AppNavProps {
   mode?: 'app';
   active: NavActive;
-  trailing?: string;
 }
 
 interface DetailNavProps {
@@ -68,8 +69,11 @@ function NavLink({ to, label, isActive }: { to: string; label: string; isActive:
   );
 }
 
-function NavLinks({ active, trailing }: { active?: NavActive; trailing?: string }) {
+function NavLinks({ active }: { active?: NavActive }) {
   const { unreadCount } = useNotifications();
+  // 이름은 페이지에서 받지 않고 현재 프로필 상태에서 직접 읽는다 (데모 패널 전환에도 바로 반영).
+  const { currentProfileId } = useDemoStore();
+  const displayName = describeProfileName(currentProfileId);
 
   return (
     <nav className="flex items-center gap-11">
@@ -83,7 +87,7 @@ function NavLinks({ active, trailing }: { active?: NavActive; trailing?: string 
           )}
         </span>
       ))}
-      {trailing && <span className="text-[14px] font-medium text-faint">{trailing}</span>}
+      {displayName && <span className="text-[14px] font-medium text-faint">{displayName} 님</span>}
     </nav>
   );
 }
@@ -103,7 +107,7 @@ export default function Navbar(props: NavbarProps) {
   if (props.mode === 'minimal') {
     return (
       <header className={barClass}>
-        <div className="flex w-full items-center gap-4 px-10">
+        <div className={`${innerClass} justify-start gap-4`}>
           <Link to="/" className="text-[19px] font-bold text-navy">
             알법
           </Link>
@@ -121,20 +125,18 @@ export default function Navbar(props: NavbarProps) {
   if (props.mode === 'logo-only') {
     return (
       <header className={barClass}>
-        <div className="mx-auto flex items-center">
+        <div className={`${innerClass} justify-start`}>
           <LogoMark />
         </div>
       </header>
     );
   }
 
-  const { active, trailing } = props;
-
   return (
     <header className={barClass}>
       <div className={innerClass}>
         <LogoMark />
-        <NavLinks active={active} trailing={trailing} />
+        <NavLinks active={props.active} />
       </div>
     </header>
   );

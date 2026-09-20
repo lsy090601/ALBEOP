@@ -30,7 +30,9 @@ export default function StartPage() {
         {isIntro ? (
           <>
             <div className="flex flex-col gap-3">
-              <h1 className="text-[28px] font-bold leading-[1.35] text-ink">{slides[step].title}</h1>
+              <h1 className="text-[28px] font-bold leading-[1.35] text-ink">
+                {slides[step].title}
+              </h1>
               <p className="text-[15px] leading-[1.7] text-muted">{slides[step].body}</p>
             </div>
 
