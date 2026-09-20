@@ -23,18 +23,23 @@ interface ProfileFormProps {
 function Section({
   label,
   required,
+  description,
   children,
 }: {
   label: string;
   required?: boolean;
+  description?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-[12px] font-bold text-ink">
-        {label}
-        {required && <span className="ml-1 text-navy">*</span>}
-      </p>
+    <div className="flex flex-col gap-3 border-t border-border pt-6 first:border-t-0 first:pt-0">
+      <div className="flex flex-col gap-1.5">
+        <p className="text-[15px] font-bold text-ink">
+          {label}
+          {required && <span className="ml-1 text-navy">*</span>}
+        </p>
+        {description && <p className="text-[13px] leading-[1.6] text-muted">{description}</p>}
+      </div>
       {children}
     </div>
   );
@@ -144,12 +149,16 @@ export default function ProfileForm({ initialProfile, onSaved }: ProfileFormProp
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       {!isEditMode && (
-        <div className="flex flex-col gap-2">
-          <h1 className="text-[22px] font-bold text-ink">간단한 상황을 알려주세요</h1>
-          <p className="text-[13px] leading-[1.6] text-muted">
-            입력한 내용은 관련 법안을 찾고 영향을 계산하는 데만 사용해요.
+        <div className="flex flex-col gap-2.5 pb-2">
+          <p className="text-[13px] font-bold text-navy">맞춤 설정 · 약 2분</p>
+          <h1 className="text-[28px] font-bold leading-[1.35] text-ink">
+            생활 조건을 알려주세요
+          </h1>
+          <p className="text-[14px] leading-[1.7] text-muted">
+            법안과의 관련성을 판단하고 예상 영향을 계산하는 데만 사용합니다. 언제든 설정에서 바꿀 수
+            있어요.
           </p>
         </div>
       )}
@@ -167,7 +176,11 @@ export default function ProfileForm({ initialProfile, onSaved }: ProfileFormProp
         </div>
       </Section>
 
-      <Section label="지금 하는 일" required>
+      <Section
+        label="지금 하는 일"
+        required
+        description="여러 항목을 선택할 수 있어요. 시간제·계약직을 선택하면 계산에 필요한 항목이 이어집니다."
+      >
         <div className="flex flex-wrap gap-2">
           {ACTIVITIES.map((option) => (
             <Chip
@@ -188,11 +201,11 @@ export default function ProfileForm({ initialProfile, onSaved }: ProfileFormProp
           value={weeklyHours}
           onChange={(e) => setWeeklyHours(e.target.value)}
           placeholder="예: 15"
-          className="w-32 rounded-[8px] border border-border px-3 py-2 text-[13px] text-ink outline-none focus:border-navy"
+          className="w-36 rounded-btn border border-border px-4 py-2.5 text-[14px] text-ink outline-none focus:border-navy"
         />
       </Section>
 
-      <Section label="사는 곳" required>
+      <Section label="사는 곳" required description="주거 지원 법안과의 관련성을 확인해요.">
         <div className="flex flex-wrap gap-2">
           {HOUSING_TYPES.map((option) => (
             <Chip
@@ -205,17 +218,17 @@ export default function ProfileForm({ initialProfile, onSaved }: ProfileFormProp
         </div>
       </Section>
 
-      <label className="flex items-center gap-2 text-[13px] text-ink">
+      <label className="flex items-center gap-2.5 text-[14px] text-ink">
         <input
           type="checkbox"
           checked={housingContractPlan}
           onChange={(e) => setHousingContractPlan(e.target.checked)}
-          className="h-4 w-4 accent-navy"
+          className="size-[18px] accent-navy"
         />
         1년 안에 집 계약 예정
       </label>
 
-      <Section label="금융 (선택)">
+      <Section label="금융 (선택)" description="해당하는 항목을 모두 선택하세요.">
         <div className="flex flex-wrap gap-2">
           {FINANCE_OPTIONS.map((option) => (
             <Chip
@@ -228,7 +241,7 @@ export default function ProfileForm({ initialProfile, onSaved }: ProfileFormProp
         </div>
       </Section>
 
-      <Section label="관심 분야" required>
+      <Section label="관심 분야" required description="놓치고 싶지 않은 주제를 선택하세요.">
         <div className="flex flex-wrap gap-2">
           {INTERESTS.map((option) => (
             <Chip
@@ -246,11 +259,11 @@ export default function ProfileForm({ initialProfile, onSaved }: ProfileFormProp
           type="time"
           value={notifyTime}
           onChange={(e) => setNotifyTime(e.target.value)}
-          className="w-32 rounded-[8px] border border-border px-3 py-2 text-[13px] text-ink outline-none focus:border-navy"
+          className="w-36 rounded-btn border border-border px-4 py-2.5 text-[14px] text-ink outline-none focus:border-navy"
         />
       </Section>
 
-      {error && <p className="text-[12px] text-red-600">{error}</p>}
+      {error && <p className="text-[13px] text-red-600">{error}</p>}
 
       <Button
         variant="primary"
@@ -258,9 +271,9 @@ export default function ProfileForm({ initialProfile, onSaved }: ProfileFormProp
         fullWidth
         disabled={!canSubmit || submitting}
         onClick={handleSubmit}
-        className="disabled:cursor-not-allowed disabled:opacity-40"
+        className="mt-2 py-4 disabled:cursor-not-allowed disabled:opacity-40"
       >
-        {submitting ? '저장 중...' : isEditMode ? '저장하기' : '시작하기'}
+        {submitting ? '저장 중...' : isEditMode ? '저장하기' : '내 맞춤 알림 시작하기'}
       </Button>
     </div>
   );

@@ -23,15 +23,15 @@ export default function StartPage() {
   const isIntro = step < slides.length;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-page py-12">
-      <div className="flex w-[560px] max-w-full flex-col gap-6 rounded-2xl border border-border bg-white px-10 py-12">
-        <p className="text-[20px] font-bold text-navy">알법</p>
+    <div className="flex min-h-screen items-center justify-center bg-page px-6 py-16">
+      <div className="flex w-full max-w-[680px] flex-col gap-7 rounded-hero border border-border bg-white px-12 py-14 shadow-hero">
+        <p className="text-[19px] font-bold text-navy">알법</p>
 
         {isIntro ? (
           <>
-            <div className="flex flex-col gap-2">
-              <h1 className="text-[24px] font-bold text-ink">{slides[step].title}</h1>
-              <p className="text-[14px] leading-[1.6] text-muted">{slides[step].body}</p>
+            <div className="flex flex-col gap-3">
+              <h1 className="text-[28px] font-bold leading-[1.35] text-ink">{slides[step].title}</h1>
+              <p className="text-[15px] leading-[1.7] text-muted">{slides[step].body}</p>
             </div>
 
             <div className="flex items-center gap-1.5">

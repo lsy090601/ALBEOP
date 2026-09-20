@@ -17,12 +17,14 @@ export default function MyVoicePage() {
   const { entries, status } = useMyVoice();
 
   return (
-    <div className="min-h-screen bg-page">
+    <div className="min-h-screen bg-white">
       <Navbar mode="app" active="voice" />
-      <div className="mx-auto flex w-[960px] max-w-full flex-col gap-[22px] bg-white pb-14 pt-11">
-        <p className="text-[12px] font-bold text-navy">내가 남긴 의견의 이후</p>
-        <h1 className="text-[30px] font-bold text-ink">내 목소리는 지금 어디까지 갔을까요?</h1>
-        <p className="text-[14px] text-muted">
+      <div className="mx-auto flex w-full max-w-default flex-col gap-5 px-10 pb-24 pt-20">
+        <p className="text-[13px] font-bold text-navy">내가 남긴 의견의 이후</p>
+        <h1 className="text-[34px] font-bold leading-[1.3] text-ink">
+          내 목소리는 지금 어디까지 갔을까요?
+        </h1>
+        <p className="mb-2 text-[14px] leading-[1.7] text-muted">
           제출로 끝나지 않도록 법안의 다음 단계를 계속 확인해요.
         </p>
 
@@ -54,9 +56,9 @@ export default function MyVoicePage() {
 
         {status === 'success' && entries.length > 0 && (
           <>
-            <div className="flex items-center gap-3 rounded-[10px] bg-surface px-4 py-[14px]">
-              <span className="text-[11px] font-bold text-navy">최근 변화</span>
-              <span className="text-[12px] font-medium text-ink">
+            <div className="flex items-center gap-4 rounded-box bg-surface px-5 py-4">
+              <span className="shrink-0 text-[13px] font-bold text-navy">최근 변화</span>
+              <span className="text-[13px] leading-[1.6] text-ink">
                 {entries[0].noticeCard?.card.easy_title} 법안이{' '}
                 {entries[0].opinion.last_tracking_status} 단계로 이동했어요
               </span>
@@ -66,21 +68,21 @@ export default function MyVoicePage() {
               <Link
                 key={opinion.id}
                 to={noticeCard ? `/notice/${noticeCard.notice.id}` : '#'}
-                className="flex w-full flex-col gap-[13px] rounded-xl border border-border px-[22px] py-5"
+                className="flex w-full flex-col gap-3 rounded-card border border-border bg-white px-7 py-6 transition-colors hover:border-line"
               >
-                <p className="text-[11px] font-bold text-navy">
+                <p className="text-[13px] font-bold text-navy">
                   {noticeCard?.card.category} · 내 의견:{' '}
                   {opinion.stance ? stanceLabel[opinion.stance] : '-'}
                 </p>
-                <p className="text-[16px] font-bold text-ink">{noticeCard?.card.easy_title}</p>
-                <p className="text-[12px] font-medium text-muted">
+                <p className="text-[19px] font-bold text-ink">{noticeCard?.card.easy_title}</p>
+                <p className="mb-4 text-[13px] leading-[1.7] text-muted">
                   {opinion.last_tracking_status} 중 · 소관위원회 검토 자료가 등록됐어요.
                 </p>
                 <StatusStepper steps={TRACKING_STEPS} currentIndex={trackingIndex} />
               </Link>
             ))}
 
-            <p className="text-[11px] text-muted">
+            <p className="mt-2 text-[13px] leading-[1.7] text-faint">
               단계명은 이해하기 쉽게 줄여 표시하며, 상세 화면에서 공식 절차명을 함께 제공해요.
             </p>
           </>
