@@ -19,6 +19,9 @@ export interface ProfileForPrompt {
   housing_contract_plan: boolean;
   finance: string[] | null;
   interests: string[] | null;
+  /** DB 컬럼이 아닌, 이번 판단에만 참고할 자유 텍스트 메모(예: 근무 요일·시간대 패턴).
+   * 스키마에 없는 값이라 calculation_basis의 "실제 필드명 인용" 대상은 아니고, 보조 맥락으로만 쓰인다. */
+  extra_note?: string | null;
 }
 
 const IMPACT_SCHEMA = {
@@ -64,6 +67,7 @@ ${proposalReason ? `\n[제안이유 요약]\n${proposalReason}` : ''}
 
 [이 사람의 프로필]
 ${formatProfile(profile)}
+${profile.extra_note ? `\n[추가 참고 — 프로필 항목은 아니지만 판단에 참고할 정보]\n${profile.extra_note}` : ''}
 
 [판단 방법]
 "해당"은 두 가지 경우를 모두 포함합니다 — 둘 중 하나만 맞아도 "해당"입니다.
