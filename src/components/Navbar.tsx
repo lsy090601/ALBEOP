@@ -34,14 +34,13 @@ const navLinks: { to: string; label: string; active: NavActive }[] = [
 
 const barClass =
   'sticky top-0 z-40 flex h-[72px] w-full items-center border-b border-border bg-white';
-const innerClass = 'mx-auto flex w-full max-w-[1240px] items-center justify-between px-10';
+// 본문 컨테이너(max-w-wide)와 좌우 끝을 맞춰 로고가 본문 왼쪽 선에 걸리게 한다.
+const innerClass = 'mx-auto flex w-full max-w-wide items-center justify-between px-10';
 
-/** 원형 심볼 + 워드마크 로고 */
 function LogoMark() {
   return (
-    <Link to="/" className="flex flex-col items-center gap-0.5" aria-label="알법 홈">
-      <span className="flex size-6 items-center justify-center rounded-[50%_50%_50%_50%/60%_60%_40%_40%] border-[2.5px] border-navy" />
-      <span className="text-[10px] font-bold leading-none text-navy">알법</span>
+    <Link to="/" className="flex items-center" aria-label="알법 홈">
+      <img src="/logo.png" alt="알법" className="h-12 w-auto" />
     </Link>
   );
 }
