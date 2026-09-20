@@ -59,7 +59,7 @@ export default function SubmitPage() {
             </div>
 
             <a
-              href="https://opinion.assembly.go.kr"
+              href={noticeCard?.notice.source_url ?? 'https://pal.assembly.go.kr'}
               target="_blank"
               rel="noreferrer"
               className="flex w-fit items-center justify-center rounded-lg bg-navy px-[18px] py-3 text-[13px] font-bold text-white"
