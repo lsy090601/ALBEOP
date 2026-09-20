@@ -4,12 +4,21 @@ import { Button } from './Button';
 import Chip from './Chip';
 import { useDemoStore } from '../hooks/useDemoStore';
 import { supabase } from '../lib/supabase';
+import type { Profile } from '../types/database';
 
 const AGE_GROUPS = ['10대', '20대', '30대 이상'] as const;
 const ACTIVITIES = ['학생', '아르바이트', '정규직', '계약직', '프리랜서', '구직중'];
 const HOUSING_TYPES = ['가족과 함께', '월세', '전세', '기숙사', '기타'];
 const FINANCE_OPTIONS = ['학자금 대출', '청년 대출', '해당 없음'];
 const INTERESTS = ['노동', '주거', '금융', '교육', '세금·보험'];
+
+interface ProfileFormProps {
+  /** 주어지면 수정 모드: 이 프로필 값으로 미리 채우고, 저장 시 /api/profile을 PATCH한다(P9).
+   * 없으면 생성 모드(P1): 새 익명 세션을 만들고 그 본인 행에 upsert한다. */
+  initialProfile?: Profile;
+  /** 수정 모드에서 저장 성공 시 호출한다. 생성 모드는 대신 "/"로 이동한다. */
+  onSaved?: () => void;
+}
 
 function Section({
   label,
@@ -35,18 +44,27 @@ function toggleInArray(list: string[], value: string): string[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
 
-export default function ProfileForm() {
+export default function ProfileForm({ initialProfile, onSaved }: ProfileFormProps) {
   const navigate = useNavigate();
   const { switchProfile } = useDemoStore();
+  const isEditMode = !!initialProfile;
 
-  const [ageGroup, setAgeGroup] = useState<(typeof AGE_GROUPS)[number] | null>(null);
-  const [activities, setActivities] = useState<string[]>([]);
-  const [weeklyHours, setWeeklyHours] = useState('');
-  const [housingType, setHousingType] = useState<string | null>(null);
-  const [housingContractPlan, setHousingContractPlan] = useState(false);
-  const [finance, setFinance] = useState<string[]>([]);
-  const [interests, setInterests] = useState<string[]>([]);
-  const [notifyTime, setNotifyTime] = useState('20:00');
+  const [ageGroup, setAgeGroup] = useState<(typeof AGE_GROUPS)[number] | null>(
+    (initialProfile?.age_group as (typeof AGE_GROUPS)[number] | undefined) ?? null,
+  );
+  const [activities, setActivities] = useState<string[]>(initialProfile?.activities ?? []);
+  const [weeklyHours, setWeeklyHours] = useState(
+    initialProfile?.weekly_hours != null ? String(initialProfile.weekly_hours) : '',
+  );
+  const [housingType, setHousingType] = useState<string | null>(
+    initialProfile?.housing_type ?? null,
+  );
+  const [housingContractPlan, setHousingContractPlan] = useState(
+    initialProfile?.housing_contract_plan ?? false,
+  );
+  const [finance, setFinance] = useState<string[]>(initialProfile?.finance ?? []);
+  const [interests, setInterests] = useState<string[]>(initialProfile?.interests ?? []);
+  const [notifyTime, setNotifyTime] = useState(initialProfile?.notify_time?.slice(0, 5) ?? '20:00');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,7 +89,32 @@ export default function ProfileForm() {
     setSubmitting(true);
     setError(null);
 
+    const fields = {
+      age_group: ageGroup,
+      activities,
+      weekly_hours: weeklyHours ? Number(weeklyHours) : null,
+      housing_type: housingType,
+      housing_contract_plan: housingContractPlan,
+      finance,
+      interests,
+      notify_time: notifyTime,
+    };
+
     try {
+      if (isEditMode && initialProfile) {
+        // 수정 모드(P9): 데모 페르소나는 브라우저에 실제 로그인 세션이 없어(RLS가 막음)
+        // 서비스 롤을 쓰는 /api/profile로 대신 저장한다.
+        const res = await fetch(`/api/profile?profile_id=${encodeURIComponent(initialProfile.id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fields),
+        });
+        const json = (await res.json()) as { ok: boolean; error?: string };
+        if (!res.ok || !json.ok) throw new Error(json.error ?? '저장에 실패했어요.');
+        onSaved?.();
+        return;
+      }
+
       const {
         data: { session: existingSession },
       } = await supabase.auth.getSession();
@@ -86,14 +129,7 @@ export default function ProfileForm() {
 
       const { error: upsertError } = await supabase.from('profiles').upsert({
         id: session.user.id,
-        age_group: ageGroup,
-        activities,
-        weekly_hours: weeklyHours ? Number(weeklyHours) : null,
-        housing_type: housingType,
-        housing_contract_plan: housingContractPlan,
-        finance,
-        interests,
-        notify_time: notifyTime,
+        ...fields,
         difficulty: ageGroup === '10대' ? '쉬움' : '보통',
       });
       if (upsertError) throw upsertError;
@@ -109,12 +145,14 @@ export default function ProfileForm() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-[22px] font-bold text-ink">간단한 상황을 알려주세요</h1>
-        <p className="text-[13px] leading-[1.6] text-muted">
-          입력한 내용은 관련 법안을 찾고 영향을 계산하는 데만 사용해요.
-        </p>
-      </div>
+      {!isEditMode && (
+        <div className="flex flex-col gap-2">
+          <h1 className="text-[22px] font-bold text-ink">간단한 상황을 알려주세요</h1>
+          <p className="text-[13px] leading-[1.6] text-muted">
+            입력한 내용은 관련 법안을 찾고 영향을 계산하는 데만 사용해요.
+          </p>
+        </div>
+      )}
 
       <Section label="나이대" required>
         <div className="flex flex-wrap gap-2">
@@ -222,7 +260,7 @@ export default function ProfileForm() {
         onClick={handleSubmit}
         className="disabled:cursor-not-allowed disabled:opacity-40"
       >
-        {submitting ? '저장 중...' : '시작하기'}
+        {submitting ? '저장 중...' : isEditMode ? '저장하기' : '시작하기'}
       </Button>
     </div>
   );
